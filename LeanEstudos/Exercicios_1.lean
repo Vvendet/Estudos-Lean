@@ -1,4 +1,4 @@
--- Exercício 1
+-- Exercícios da seção 1
 
 theorem ex1 (n : Nat): (∃ k: Nat, n = 4 * k) → (∃ m: Nat, n = 2*m):= by
   intro h
