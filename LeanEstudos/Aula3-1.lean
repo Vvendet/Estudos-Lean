@@ -58,3 +58,17 @@ example (a b c : Nat) : a + b + c = c + b + a := by
   have h2:  c + (a + b) = c + (b + a) := by rw [Nat.add_comm a b]
   have h3: c + (b + a) = c + b + a := Eq.symm (Nat.add_assoc c b a)
   rw [h1, h2, h3]
+
+theorem e7 (a b c: Nat) : (a ∣ b) → (a∣c) → (∀ x y : Nat, a∣(x*b + y*c)) := by
+  intro h1 h2
+  cases h1 with
+  | intro k1 hk1
+  cases h2 with
+  | intro k2 hk2
+  intro x y
+  have eq : x*b + y*c = a*(x*k1 + y*k2) := by
+    rw [hk1, hk2]
+    have lema1 : x*(a*k1) = a*(x*k1) := by simp [Nat.mul_left_comm]
+    have lema2 : y*(a*k2) = a*(y*k2) := by simp [Nat.mul_left_comm]
+    rw [lema1,lema2, Nat.mul_add]
+  exact ⟨x*k1 + y*k2, eq⟩
