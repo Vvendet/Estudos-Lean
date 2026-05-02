@@ -1,13 +1,14 @@
+import Mathlib.AlgebraicGeometry.AffineScheme
 -- Exercícios da seção 1
 
-theorem ex1 (n : Nat): (∃ k: Nat, n = 4 * k) → (∃ m: Nat, n = 2*m):= by
+theorem ex1 (n : Nat) : (∃ k: Nat, n = 4 * k) → (∃ m: Nat, n = 2*m):= by
   intro h
   cases h with
   | intro k hk
   have h2 : n = 2 * (2 * k) := Nat.mul_assoc 2 2 k ▸ hk
   exact ⟨2 * k, h2⟩
 
-theorem ex2 (n m : Nat): (∃ a: Nat, n = 2 * a) ∧ (∃ b: Nat, m = 2 * b) → (∃ c: Nat, n + m = 2 * c) := by
+theorem ex2 (n m : Nat) : (∃ a: Nat, n = 2 * a) ∧ (∃ b: Nat, m = 2 * b) → (∃ c: Nat, n + m = 2 * c) := by
   intro h1
   cases h1 with
   | intro h2 h3 =>
@@ -19,7 +20,7 @@ theorem ex2 (n m : Nat): (∃ a: Nat, n = 2 * a) ∧ (∃ b: Nat, m = 2 * b) →
         have h5 : n + m = 2 * (a + b) := by simp [h4, Nat.mul_add]
         exact ⟨a + b, h5⟩
 
-theorem ex3 (n : Nat): (∃ a: Nat, n=2*a) → (∃ b: Nat, n*n = 4*b):=
+theorem ex3 (n : Nat) : (∃ a: Nat, n=2*a) → (∃ b: Nat, n*n = 4*b):=
   by
     intro h
     cases h with
@@ -30,7 +31,7 @@ theorem ex3 (n : Nat): (∃ a: Nat, n=2*a) → (∃ b: Nat, n*n = 4*b):=
     have n_square2 : n*n = 4*(a*a) := by simp [n_square1, comutacao1, associacao3,Nat.mul_assoc]
     exact ⟨a*a,n_square2⟩
 
-theorem ex4 (n : Nat): (∃ a: Nat, n= 2*a) → ¬(∃ b: Nat, n = 2*b + 1) := by
+theorem ex4 (n : Nat) : (∃ a: Nat, n= 2*a) → ¬(∃ b: Nat, n = 2*b + 1) := by
   intro h_even h_odd
   cases h_even with
   | intro a ha =>
@@ -38,3 +39,5 @@ theorem ex4 (n : Nat): (∃ a: Nat, n= 2*a) → ¬(∃ b: Nat, n = 2*b + 1) := b
     | intro b hb =>
     have h1 : 0 = 1 % 2 := by omega
     contradiction
+
+example : (0 = 1) → false := fun h => Nat.noConfusion h

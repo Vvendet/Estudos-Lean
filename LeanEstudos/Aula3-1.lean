@@ -1,4 +1,3 @@
-import LeanEstudos.Basic
 import Init.Data.Nat.Basic
 
 example : True ∧ True := by
