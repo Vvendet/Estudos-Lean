@@ -8,7 +8,9 @@ theorem ex1 (n : Nat) : (∃ k: Nat, n = 4 * k) → (∃ m: Nat, n = 2*m):= by
   have h2 : n = 2 * (2 * k) := Nat.mul_assoc 2 2 k ▸ hk
   exact ⟨2 * k, h2⟩
 
-theorem ex2 (n m : Nat) : (∃ a: Nat, n = 2 * a) ∧ (∃ b: Nat, m = 2 * b) → (∃ c: Nat, n + m = 2 * c) := by
+theorem ex2 (n m : Nat) : (∃ a: Nat, n = 2 * a) ∧ (∃ b: Nat, m = 2 * b) →
+(∃ c: Nat, n + m = 2 * c) :=
+by
   intro h1
   cases h1 with
   | intro h2 h3 =>
