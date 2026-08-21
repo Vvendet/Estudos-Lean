@@ -285,7 +285,7 @@ lemma exists_infinite_reduction_of_not_normalizing
         simp [f, F]
       have hf : ∀ n, Reduces R (f n) (f (n + 1)) := by
         intro n
-        simp [f, F]
+        simp only [f, F]
         exact Classical.choose_spec (hnext (F n).1 (F n).2)
       exact ⟨f, hf0, hf⟩
 
