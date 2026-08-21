@@ -63,11 +63,127 @@ theorem ARS.WFI_iff_StronglyNormalizing {α : Type} (R : ARS α) :
       simpa [f, fS] using hstep (fS n)
     exact hSN ⟨f, hf⟩
 
+def IsReductionPath {α : Type} (R : ARS α) : List α → Prop
+  | [] => False
+  | [_] => True
+  | x :: y :: xs =>
+      Reduces R x y ∧ IsReductionPath R (y :: xs)
+
+lemma IsReductionPath.ne_nill {α : Type} {R : ARS α} {p : List α} (hp : IsReductionPath R p) :
+p ≠ [] := by
+  cases p with
+  | nil =>
+    simp [IsReductionPath] at hp
+  | cons x xs =>
+    simp
+
+lemma IsReductionPath.singleton {α : Type} {R : ARS α} (x : α) :
+IsReductionPath R [x] := by
+  simp [IsReductionPath]
+
+lemma IsReductionPath.pair_iff
+    {α : Type} {R : ARS α} (x y : α) :
+    IsReductionPath R [x, y] ↔ Reduces R x y := by
+  simp [IsReductionPath]
+
+lemma IsReductionPath.append_singleton_iff
+    {α : Type} {R : ARS α}
+    {p : List α} (hp : IsReductionPath R p) (c : α) :
+    IsReductionPath R (p ++ [c]) ↔
+      Reduces R (p.getLast (IsReductionPath.ne_nill hp)) c := by
+  induction p with
+  | nil =>
+      simp [IsReductionPath] at hp
+  | cons x xs ih =>
+      cases xs with
+      | nil =>
+          simp [IsReductionPath]
+      | cons y ys =>
+          have hxy : Reduces R x y := hp.1
+          have htail : IsReductionPath R (y :: ys) := hp.2
+          have ih' :
+              IsReductionPath R ((y :: ys) ++ [c]) ↔
+                Reduces R ((y :: ys).getLast htail.ne_nill) c :=
+            ih htail
+          simpa [IsReductionPath, hxy, ih'] using
+            (show
+              Reduces R x y ∧
+                IsReductionPath R ((y :: ys) ++ [c]) ↔
+              Reduces R ((x :: y :: ys).getLast hp.ne_nill) c
+             from by
+               rw [ih']
+               constructor
+               · intro h
+                 exact h.2
+               · intro h
+                 exact ⟨hxy, h⟩)
+
+lemma IsReductionPath.of_append_singleton
+    {α : Type} {R : ARS α}
+    {p : List α} {c : α}
+    (hp : IsReductionPath R p)
+    (hpc : Reduces R (p.getLast hp.ne_nill) c) :
+    IsReductionPath R (p ++ [c]) := by
+  exact (IsReductionPath.append_singleton_iff hp c).mpr hpc
+
 def ReductionTree {α : Type} (R : ARS α) (x : α) : Set α :=
   { y | ReducesStar R x y }
 
 def ReductionTree' {α : Type} (R : ARS α) (x : α) : Set α :=
   { y | (x, y) ∈ ARS.reflTransClosure R }
+
+def ARS.ReductionTree {α : Type} (R : ARS α) (a : α) : Set (List α) :=
+  { p | p ≠ [] ∧ p.head? = some a ∧ IsReductionPath R p }
+
+def List.label {α : Type} : {p : List α // p ≠ []} → α :=
+  fun p => p.1.getLast p.2
+
+def ReductionTree.label
+    {α : Type} {R : ARS α} {a : α}
+    (p : List α) (hp : p ∈ R.ReductionTree a) : α :=
+  p.getLast (by
+    simpa [ARS.ReductionTree] using hp.1)
+
+def ARS.Label
+    {α : Type} {R : ARS α} {a : α}
+    (p : {p : List α // p ∈ R.ReductionTree a}) : α :=
+  p.val.getLast (by
+    simpa [ARS.ReductionTree] using p.property.1)
+
+def ARS.IsChildOf
+    {α : Type} (R : ARS α) (a : α)
+    (p q : {p : List α // p ∈ R.ReductionTree a}) : Prop :=
+  ∃ c : α,
+    q.val = p.val ++ [c] ∧
+    Reduces R (ARS.Label p) c
+
+theorem mem_ReductionTree_append_iff
+    {α : Type} (R : ARS α) (a : α)
+    (p : List α) (hp : p ∈ R.ReductionTree a) (c : α) :
+    p ++ [c] ∈ R.ReductionTree a ↔
+      Reduces R (p.getLast hp.1) c := by
+  have hpath : IsReductionPath R p := hp.2.2
+  constructor
+  · intro hpc
+    have hpath' : IsReductionPath R (p ++ [c]) := hpc.2.2
+    exact (IsReductionPath.append_singleton_iff hpath c).mp hpath'
+  · intro hpc
+    have hpath' : IsReductionPath R (p ++ [c]) := by
+      exact (IsReductionPath.append_singleton_iff hpath c).mpr hpc
+    constructor
+    · simp [hp.1]
+    · constructor
+      · simp [hp.2.1]
+      · exact hpath'
+
+theorem ARS.isChildOf_iff
+    {α : Type} (R : ARS α) (a : α)
+    (p q : {p : List α // p ∈ R.ReductionTree a}) :
+    ARS.IsChildOf R a p q ↔
+      ∃ c : α,
+        q.val = p.val ++ [c] ∧
+        Reduces R (ARS.Label p) c := by
+  rfl
 
 lemma ReductionTree_eq_ReductionTree' {α : Type} (R : ARS α) (x : α) :
   ReductionTree R x = ReductionTree' R x := by
@@ -102,6 +218,7 @@ lemma ARS.finitelyBranching_iff_finitelyBranching' {α : Type} (R : ARS α) :
     simp only [Reduces]
     exact h
 
-lemma ReductionTree_eq_StronglyNormalizing_if_finitelyBranching
-{α : Type} (R : ARS α) (h : ARS.finitelyBranching R) (a : α) :
-Set.Finite (ReductionTree R a) ↔ StronglyNormalizing R := by sorry
+def StronglyNormalizingAt {α : Type} (R : ARS α) (a : α) : Prop :=
+  ¬ ∃ f : Nat → α,
+    f 0 = a ∧
+    ∀ n, Reduces R (f n) (f (n + 1))
