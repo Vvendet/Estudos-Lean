@@ -76,6 +76,7 @@ def ReducesSymmTrans {α : Type} (R : ARS α) (a b : α) : Prop :=
 def ARS.reflSymmTransClosure {α : Type} (R : ARS α) : SetRel α α :=
   R.symmTransClosure ∪ ARS.id α
 
+
 def ReducesReflSymmTrans {α : Type} (R : ARS α) (a b : α) : Prop :=
   (a, b) ∈ ARS.reflSymmTransClosure R
 
@@ -102,11 +103,15 @@ def HasInfiniteReduction {α : Type} (R : ARS α) : Prop :=
 def StronglyNormalizing'' {α : Type} (R : ARS α) : Prop :=
   ¬ HasInfiniteReduction R
 
+
+def IsJoinable {α : Type} (R : ARS α) (x y : α) : Prop :=
+  ∃ z, ReducesStar R x z ∧ ReducesStar R y z
+
 def IsConfluent {α : Type} (R : ARS α) : Prop :=
   ∀ x y z, ReducesStar R x y → ReducesStar R x z → ∃ w, ReducesStar R y w ∧ ReducesStar R z w
 
 def IsChurchRosser {α : Type} (R : ARS α) : Prop :=
-  ∀ x y z, Reduces R x y → Reduces R x z → ∃ w, ReducesStar R y w ∧ ReducesStar R z w
+  ∀ x y, ReducesStar R x y → IsJoinable R x y
 
 def IsReducible {α : Type} (R : ARS α) (x : α) : Prop :=
   ∃ y, Reduces R x y
@@ -124,8 +129,6 @@ def IsDirectSuccessorOf {α : Type} (R : ARS α) (x y : α) : Prop :=
 def IsSuccessorOf {α : Type} (R : ARS α) (x y : α) : Prop :=
   ReducesStar R x y
 
-def IsJoinable {α : Type} (R : ARS α) (x y : α) : Prop :=
-  ∃ z, ReducesStar R x z ∧ ReducesStar R y z
 
 -- Resultados e teoremas sobre sistemas abstratos de redução (ARS) e suas propriedades.
 -----------------------------------------
