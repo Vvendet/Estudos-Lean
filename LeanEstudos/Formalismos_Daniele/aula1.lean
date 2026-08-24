@@ -111,7 +111,7 @@ def IsConfluent {α : Type} (R : ARS α) : Prop :=
   ∀ x y z, ReducesStar R x y → ReducesStar R x z → ∃ w, ReducesStar R y w ∧ ReducesStar R z w
 
 def IsChurchRosser {α : Type} (R : ARS α) : Prop :=
-  ∀ x y, ReducesStar R x y → IsJoinable R x y
+  ∀ x y, ReducesReflSymmTrans R x y → IsJoinable R x y
 
 def IsReducible {α : Type} (R : ARS α) (x : α) : Prop :=
   ∃ y, Reduces R x y
