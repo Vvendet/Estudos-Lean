@@ -73,9 +73,11 @@ def ARS.symmTransClosure {α : Type} (R : ARS α) : SetRel α α :=
 def ReducesSymmTrans {α : Type} (R : ARS α) (a b : α) : Prop :=
   (a, b) ∈ ARS.symmTransClosure R
 
-def ARS.reflSymmTransClosure {α : Type} (R : ARS α) : SetRel α α :=
+def ARS.reflSymmTransClosure' {α : Type} (R : ARS α) : SetRel α α :=
   R.symmTransClosure ∪ ARS.id α
 
+def ARS.reflSymmTransClosure {α : Type} (R : ARS α) : SetRel α α :=
+  { (a, b) | Relation.EqvGen (fun x y => (x, y) ∈ R.red) a b }
 
 def ReducesReflSymmTrans {α : Type} (R : ARS α) (a b : α) : Prop :=
   (a, b) ∈ ARS.reflSymmTransClosure R
