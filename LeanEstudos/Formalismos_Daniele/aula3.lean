@@ -159,14 +159,11 @@ lemma ReducesStar_iff_ReducesStar'
           rw [Reduces.pow, ARS.id]
           exact ⟨x, Set.mem_univ _, rfl⟩
 
-
-
 theorem IsConfluent_iff_IsChurchRosser
     {α : Type} (R : ARS α) :
     IsConfluent R ↔ IsChurchRosser R := by
   constructor
-  · intro hconf
-    intro x y hxy
+  · intro hconf x y hxy
     change Relation.EqvGen (fun a b => Reduces R a b) x y at hxy
     refine Relation.EqvGen.rec
       (motive := fun x y _ => IsJoinable R x y)
@@ -174,56 +171,38 @@ theorem IsConfluent_iff_IsChurchRosser
     · -- Caso x → y
       intro x y h
       refine ⟨y, ?_, ?_⟩
-
       · rw [ReducesStar_iff_ReducesStar']
         exact Relation.ReflTransGen.single h
-
       · rw [ReducesStar_iff_ReducesStar']
         exact Relation.ReflTransGen.refl
     · -- Caso x = x
       intro x
       refine ⟨x, ?_, ?_⟩
-
       · rw [ReducesStar_iff_ReducesStar']
         exact Relation.ReflTransGen.refl
-
       · rw [ReducesStar_iff_ReducesStar']
         exact Relation.ReflTransGen.refl
-
     · -- Caso de simetria
       intro x y hxy ih
       rcases ih with ⟨w, hxw, hyw⟩
       exact ⟨w, hyw, hxw⟩
-
     · -- Caso de transitividade
       intro x y z hxy hyz ihxy ihyz
-
       rcases ihxy with ⟨u, hxu, hyu⟩
       rcases ihyz with ⟨v, hyv, hzv⟩
-
       rcases hconf y u v hyu hyv with ⟨w, huw, hvw⟩
-
       refine ⟨w, ?_, ?_⟩
-
       · exact ReducesStar.trans hxu huw
-
       · exact ReducesStar.trans hzv hvw
-
-  · intro hcr
-    intro x y z hxy hxz
-
-    change ∃ w, ReducesStar R y w ∧ ReducesStar R z w
-
+  · intro hcr x y z hxy hxz
     have hxy' :
         Relation.ReflTransGen (fun a b => Reduces R a b) x y := by
       change ReducesStar' R x y
       exact ReducesStar_iff_ReducesStar'.mp hxy
-
     have hxz' :
         Relation.ReflTransGen (fun a b => Reduces R a b) x z := by
       change ReducesStar' R x z
       exact ReducesStar_iff_ReducesStar'.mp hxz
-
     have hyx_eqv :
         Relation.EqvGen (fun a b => Reduces R a b) y x := by
       have aux :
@@ -234,16 +213,13 @@ theorem IsConfluent_iff_IsChurchRosser
         induction huv with
         | refl =>
             exact Relation.EqvGen.refl u
-
         | tail huv hvw ih =>
             have hwv :
                 Relation.EqvGen (fun a b => Reduces R a b) _ _ :=
               Relation.EqvGen.symm _ _
                 (Relation.EqvGen.rel _ _ hvw)
-            exact Relation.EqvGen.trans hwv ih
-
+            exact Relation.EqvGen.trans _ _ _ hwv ih
       exact aux hxy'
-
     have hxz_eqv :
         Relation.EqvGen (fun a b => Reduces R a b) x z := by
       have aux :
@@ -254,16 +230,12 @@ theorem IsConfluent_iff_IsChurchRosser
         induction huv with
         | refl =>
             exact Relation.EqvGen.refl u
-
-        | tail hab hbc ih =>
-            exact Relation.EqvGen.trans
+        | tail huv hvw ih =>
+            exact Relation.EqvGen.trans _ _ _
               ih
-              (Relation.EqvGen.rel _ _ hbc)
-
+              (Relation.EqvGen.rel _ _ hvw)
       exact aux hxz'
-
     have hyz_eqv :
         Relation.EqvGen (fun a b => Reduces R a b) y z :=
-      Relation.EqvGen.trans hyx_eqv hxz_eqv
-
+      Relation.EqvGen.trans _ _ _ hyx_eqv hxz_eqv
     exact hcr y z hyz_eqv
