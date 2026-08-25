@@ -62,9 +62,9 @@ lemma Reduces.pow_subset_symmClosure
     ∀ n, Reduces.pow R n ⊆ Reduces.pow R.symmClosure n := by
   intro n
   induction n with
-  | zero =>
+  | zero  =>
       intro x hx
-        simp only [ARS.id] using hx
+      simpa [Reduces.pow, ARS.id] using hx
   | succ n ih =>
       intro x hx
       rw [Reduces.pow] at hx ⊢
@@ -78,95 +78,30 @@ lemma Reduces.pow_subset_symmClosure
 def ReducesStar' {α : Type} (R : ARS α) (x y : α) : Prop :=
   Relation.ReflTransGen (fun a b => Reduces R a b) x y
 
+
+
 lemma ReducesStar_iff_ReducesStar'
     {α : Type} {R : ARS α} {x y : α} :
     ReducesStar R x y ↔
       ReducesStar' R x y := by
-  constructor
+  sorry
 
-  · intro h
-    rw [ReducesStar, ARS.reflTransClosure] at h
-
-    rcases h with h | h
-
-    ·
-      rw [ARS.transitiveClosure] at h
-      rcases Set.mem_iUnion.mp h with ⟨n, hn⟩
-
-      induction n.val with
-      | zero =>
-          have hnpos : 0 < n.val := n.property
-          omega
-          simp only [hnval, Reduces.pow.eq_def, ARS.id] at hn
-          rcases hn with ⟨a, ha, hxy⟩
-          have hax : a = x := congrArg Prod.fst hxy
-          have hay : a = y := congrArg Prod.snd hxy
-          subst x
-          subst y
-          exact Relation.ReflTransGen.refl
-
-      | succ n ih =>
-          rw [Reduces.pow] at hn
-          rcases hn with ⟨z, hxz, hzy⟩
-          exact Relation.ReflTransGen.tail (ih hxz) hzy
-
-    ·
-      rw [ARS.id] at h
-      rcases h with ⟨a, ha, hxy⟩
-      have hax : a = x := congrArg Prod.fst hxy
-      have hay : a = y := congrArg Prod.snd hxy
-      subst x
-      subst y
-      exact Relation.ReflTransGen.refl
-
-  · intro h
-    induction h with
-
-    | refl =>
-        rw [ReducesStar, ARS.reflTransClosure]
-        right
-        rw [ARS.id]
-        exact ⟨x, Set.mem_univ _, rfl⟩
-
-    | @tail b c d hbc hcd ih =>
-        rw [ReducesStar, ARS.reflTransClosure]
-
-        rcases ih with ih | ih
-
-        ·
-          right
-          rw [ARS.id] at ih
-          rcases ih with ⟨a, ha, hac⟩
-
-          have hab : a = b := congrArg Prod.fst hac
-          have hbc' : a = c := congrArg Prod.snd hac
-
-          subst b
-          subst c
-
-          left
-          rw [ARS.transitiveClosure]
-          refine Set.mem_iUnion.mpr ⟨⟨1, by omega⟩, ?_⟩
-
-          rw [Reduces.pow, ARS.id]
-          exact ⟨x, Set.mem_univ _, rfl⟩
-
-        ·
-          left
-          rw [ARS.transitiveClosure] at ih
-          rcases Set.mem_iUnion.mp ih with ⟨n, hn⟩
-
-          refine Set.mem_iUnion.mpr ⟨⟨n.val + 1, by omega⟩, ?_⟩
-
-          rw [Reduces.pow]
-          exact ⟨c, hn, hcd⟩
 
 theorem IsConfluent_iff_IsChurchRosser
     {α : Type} (R : ARS α) :
     IsConfluent R ↔ IsChurchRosser R := by
   constructor
   · intro hconf
-    exact Relation.church_rosser hconf
+    intro x y hxy
+    -- Precisamos provar que x e y são joináveis.
+    -- Usamos confluência com x →* y e x →* x.
+    have hxx : ReducesStar R x x := by
+      rw [ReducesStar, ARS.reflTransClosure]
+      right
+      rw [ARS.id]
+      simp
+
+    exact hconf x y x hxy hxx
 
   · intro hcr
     intro x y z hxy hxz
@@ -175,5 +110,4 @@ theorem IsConfluent_iff_IsChurchRosser
     --
     -- Church-Rosser será aplicado a uma sequência x →* y
     -- e, depois, precisamos usar a equivalência entre os caminhos.
-    rw [IsChurchRosser] at hcr
-    unfold IsJoinable at hcr
+    sorry
