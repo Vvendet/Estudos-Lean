@@ -239,3 +239,173 @@ theorem IsConfluent_iff_IsChurchRosser
         Relation.EqvGen (fun a b => Reduces R a b) y z :=
       Relation.EqvGen.trans _ _ _ hyx_eqv hxz_eqv
     exact hcr y z hyz_eqv
+
+
+theorem StronglyConfluent'_to_IsConfluent
+    {α : Type} (R : ARS α) :
+    StronglyConfluent' R → IsConfluent R := by
+  intro hsc x y z hxy hxz
+  have hxy' :
+      Relation.ReflTransGen (fun a b => Reduces R a b) x y :=
+    ReducesStar_iff_ReducesStar'.mp hxy
+  have hxz' :
+      Relation.ReflTransGen (fun a b => Reduces R a b) x z :=
+    ReducesStar_iff_ReducesStar'.mp hxz
+  have hstrong :
+      ∀ a b c,
+        Reduces R a b →
+        Reduces R a c →
+        ∃ w,
+          Relation.ReflGen (fun a b => Reduces R a b) b w ∧
+          Relation.ReflTransGen (fun a b => Reduces R a b) c w := by
+    intro a b c hab hac
+    rcases hsc a c b ⟨hac, hab⟩ with ⟨w, hcw, hbw | hwb⟩
+    · refine ⟨w, ?_, ?_⟩
+      · exact Relation.ReflGen.single hbw
+      · exact
+          (ReducesStar_iff_ReducesStar' (R := R) (x := c) (y := w)).mp hcw
+    · subst w
+      refine ⟨b, ?_, ?_⟩
+      · exact Relation.ReflGen.refl
+      · exact
+          (ReducesStar_iff_ReducesStar' (R := R) (x := c) (y := b)).mp hcw
+  have hjoin :
+      Relation.Join
+        (Relation.ReflTransGen (fun a b => Reduces R a b)) y z :=
+    Relation.church_rosser hstrong hxy' hxz'
+  rcases hjoin with ⟨w, hyw, hzw⟩
+  refine ⟨w, ?_, ?_⟩
+  · exact ReducesStar_iff_ReducesStar'.mpr hyw
+  · exact ReducesStar_iff_ReducesStar'.mpr hzw
+
+theorem IsChurchRosser_to_HasNormalFormProperty'
+    {α : Type} (R : ARS α) :
+    IsChurchRosser R → HasNormalFormProperty' R := by
+  intro hcr a b h
+  rcases h with ⟨hab, hnormal⟩
+  have hab' :
+      Relation.EqvGen (fun x y => Reduces R x y) a b := by
+    exact hab
+  have hjoin : IsJoinable R a b := by
+    exact hcr a b hab'
+  rcases hjoin with ⟨w, haw, hbw⟩
+  have hbw' :
+      Relation.ReflTransGen (fun x y => Reduces R x y) b w :=
+    ReducesStar_iff_ReducesStar'.mp hbw
+  have hw_eq_b : w = b := by
+    induction hbw' using Relation.ReflTransGen.head_induction_on with
+    | refl =>
+        rfl
+    | head hstep hrest ih =>
+        exfalso
+        exact hnormal _ hstep
+  subst w
+  exact haw
+
+theorem HasNormalFormProperty'_to_HasSingleNormalForm'
+    {α : Type} (R : ARS α) :
+    HasNormalFormProperty' R → HasSingleNormalForm' R := by
+  intro hnf a b h
+  rcases h with ⟨hab, hnormal_a, hnormal_b⟩
+  have hab_star : ReducesStar R a b := by
+    exact hnf a b ⟨hab, hnormal_b⟩
+  have hab' :
+      Relation.ReflTransGen (fun x y => Reduces R x y) a b :=
+    ReducesStar_iff_ReducesStar'.mp hab_star
+  induction hab' using Relation.ReflTransGen.head_induction_on with
+  | refl =>
+      rfl
+  | head hstep hrest ih =>
+      exact False.elim (hnormal_a _ hstep)
+
+
+theorem HasSingleNormalForm'_to_HasSingleNormalFormOf'
+    {α : Type} (R : ARS α) :
+    HasSingleNormalForm' R → HasSingleNormalFormOf' R := by
+  intro hun a b c h
+  rcases h with ⟨⟨hab, hac⟩, ⟨hnormal_b, hnormal_c⟩⟩
+  have hba :
+      ReducesReflSymmTrans R b a := by
+    rw [ReducesReflSymmTrans, ARS.reflSymmTransClosure]
+    have hab' :
+        Relation.ReflTransGen (fun x y => Reduces R x y) a b :=
+      ReducesStar_iff_ReducesStar'.mp hab
+    have aux :
+        ∀ {u v : α},
+          Relation.ReflTransGen (fun x y => Reduces R x y) u v →
+          Relation.EqvGen (fun x y => Reduces R x y) v u := by
+      intro u v huv
+      induction huv with
+      | refl =>
+          exact Relation.EqvGen.refl u
+      | tail huv hstep ih =>
+          have hcb :
+              Relation.EqvGen (fun x y => Reduces R x y) _ _ :=
+            Relation.EqvGen.symm _ _
+              (Relation.EqvGen.rel _ _ hstep)
+          exact Relation.EqvGen.trans _ _ _ hcb ih
+    exact aux hab'
+  have hca :
+      ReducesReflSymmTrans R c a := by
+    rw [ReducesReflSymmTrans, ARS.reflSymmTransClosure]
+    have hac' :
+        Relation.ReflTransGen (fun x y => Reduces R x y) a c :=
+      ReducesStar_iff_ReducesStar'.mp hac
+    have aux :
+        ∀ {u v : α},
+          Relation.ReflTransGen (fun x y => Reduces R x y) u v →
+          Relation.EqvGen (fun x y => Reduces R x y) v u := by
+      intro u v huv
+      induction huv with
+      | refl =>
+          exact Relation.EqvGen.refl u
+      | tail huv hstep ih =>
+          have hcb :
+              Relation.EqvGen (fun x y => Reduces R x y) _ _ :=
+            Relation.EqvGen.symm _ _
+              (Relation.EqvGen.rel _ _ hstep)
+          exact Relation.EqvGen.trans _ _ _ hcb ih
+    exact aux hac'
+  have hbc :
+      ReducesReflSymmTrans R b c := by
+    rw [ReducesReflSymmTrans, ARS.reflSymmTransClosure] at hba hca ⊢
+    exact Relation.EqvGen.trans _ _ _ hba (Relation.EqvGen.symm _ _ hca)
+  exact hun b c ⟨hbc, hnormal_b, hnormal_c⟩
+
+
+theorem WeaklyNormalizing_and_HasSingleNormalFormOf_to_IsConfluent
+    {α : Type} (R : ARS α) :
+    WeaklyNormalizing R →
+    HasSingleNormalForm_of R →
+    IsConfluent R := by
+  intro hwn hun x y z hxy hxz
+  rcases hwn y with ⟨y', hyy', hnormal_y'⟩
+  rcases hwn z with ⟨z', hzz', hnormal_z'⟩
+  have hxy' :
+      ReducesStar R x y' := by
+    have hxy_new :
+        Relation.ReflTransGen (fun a b => Reduces R a b) x y :=
+      ReducesStar_iff_ReducesStar'.mp hxy
+    have hyy'_new :
+        Relation.ReflTransGen (fun a b => Reduces R a b) y y' :=
+      ReducesStar_iff_ReducesStar'.mp hyy'
+    have hxy'_new :
+        Relation.ReflTransGen (fun a b => Reduces R a b) x y' :=
+      Relation.ReflTransGen.trans hxy_new hyy'_new
+    exact ReducesStar_iff_ReducesStar'.mpr hxy'_new
+  have hxz' :
+      ReducesStar R x z' := by
+    have hxz_new :
+        Relation.ReflTransGen (fun a b => Reduces R a b) x z :=
+      ReducesStar_iff_ReducesStar'.mp hxz
+    have hzz'_new :
+        Relation.ReflTransGen (fun a b => Reduces R a b) z z' :=
+      ReducesStar_iff_ReducesStar'.mp hzz'
+    have hxz'_new :
+        Relation.ReflTransGen (fun a b => Reduces R a b) x z' :=
+      Relation.ReflTransGen.trans hxz_new hzz'_new
+    exact ReducesStar_iff_ReducesStar'.mpr hxz'_new
+  have hyz' : y' = z' := by
+    exact hun x y' z' hxy' hxz' hnormal_y' hnormal_z'
+  subst z'
+  exact ⟨y', hyy', hzz'⟩
