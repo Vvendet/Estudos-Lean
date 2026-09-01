@@ -35,8 +35,7 @@ def Relation.Acyclic {α : Type} (R : α → α → Prop) : Prop :=
 -- section of fast lemmas:
 -- all of partial orders is anti-symmetric, all of total orders is a partial order,
 -- all of total orders is a quasi-order, all of reflexive partial orders is a quasi-order
--- transitive closure of a relation is a partial order iff the relation is acyclic,
--- transitive closure of a relation is a quasi-order iff the relation is acyclic
+-- transitive closure of a relation is a partial order iff the relation is acyclic.
 
 lemma Partial_Order.anti_symmetric {α : Type} {R : α → α → Prop} (h : Partial_Order R) :
   Anti_Symmetric R := by
@@ -74,10 +73,9 @@ lemma Relation.TransGen.partial_order_iff_acyclic {α : Type} {R : α → α →
     push Not at hacyclic
     unfold Partial_Order
     have hnoirreflexive : ¬Relation.Irreflexive (Relation.TransGen R) := by
+      intro hIrref
       obtain ⟨x, hcycle⟩ := hacyclic
-      unfold Relation.Irreflexive
-      push Not
-      exact ⟨x, hcycle⟩
+      exact hIrref x hcycle
     intro ⟨h1, h2⟩
     exact hnoirreflexive h1
   · intro hacyclic
