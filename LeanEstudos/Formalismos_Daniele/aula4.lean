@@ -291,3 +291,5 @@ lemma WordReduces_context
     rw [hv]
     -- A tática simp normaliza os agrupamentos da concatenação
     simp
+
+--
