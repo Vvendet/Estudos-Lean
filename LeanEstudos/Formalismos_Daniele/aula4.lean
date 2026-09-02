@@ -1,5 +1,6 @@
 import LeanEstudos.Formalismos_Daniele.aula2_anexo
 
+
 -- definitions of irreflexive relation, transitive relation, partial orders, total orders,
 -- reflexive relation, quasi-orders, anti-symmetric relations and reflexive partial order
 
