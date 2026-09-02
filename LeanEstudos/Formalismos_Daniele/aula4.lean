@@ -1,4 +1,4 @@
-import LeanEstudos.Formalismos_Daniele.aula2_anexo
+import LeanEstudos.Formalismos_Daniele.aula3_anexo
 
 
 -- definitions of irreflexive relation, transitive relation, partial orders, total orders,
@@ -91,3 +91,36 @@ lemma Relation.TransGen.partial_order_iff_acyclic {α : Type} {R : α → α →
         intro x y z hxy hyz
         exact Relation.TransGen.trans hxy hyz
       exact htransitive
+
+-- ---------------------------------------------------------
+-- PRODUTO LEXICOGRÁFICO
+-- ---------------------------------------------------------
+
+/-- Definição de Ordem Lexicográfica sobre um produto de tipos -/
+def Lexicographic_Order {α β : Type} (Ra : α → α → Prop) (Rb : β → β → Prop) :
+(α × β) → (α × β) → Prop :=
+  fun p1 p2 => Ra p1.1 p2.1 ∨ (p1.1 = p2.1 ∧ Rb p1.2 p2.2)
+
+/-- Lema: O produto lexicográfico de ordens parciais é uma ordem parcial -/
+lemma Lexicographic_Order_PartialOrder {α β : Type} {Ra : α → α → Prop} {Rb : β → β → Prop}
+  (ha : Partial_Order Ra) (hb : Partial_Order Rb) : Partial_Order (Lexicographic_Order Ra Rb) := by
+  constructor
+  · -- Irreflexividade
+    intro p hp
+    unfold Lexicographic_Order at hp
+    rcases hp with h1 | ⟨heq, h2⟩
+    · exact ha.1 p.1 h1
+    · exact hb.1 p.2 h2
+  · -- Transitividade
+    intro p1 p2 p3 h12 h23
+    unfold Lexicographic_Order at h12 h23 ⊢
+    rcases h12 with ha12 | ⟨heq12, hb12⟩
+    · rcases h23 with ha23 | ⟨heq23, _⟩
+      · left; exact ha.2 p1.1 p2.1 p3.1 ha12 ha23
+      · left; rw [heq23] at ha12; exact ha12
+    · rcases h23 with ha23 | ⟨heq23, hb23⟩
+      · left; rw [← heq12] at ha23; exact ha23
+      · right
+        constructor
+        · exact Eq.trans heq12 heq23
+        · exact hb.2 p1.2 p2.2 p3.2 hb12 hb23
