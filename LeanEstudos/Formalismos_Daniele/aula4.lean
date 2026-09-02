@@ -93,6 +93,84 @@ lemma Relation.TransGen.partial_order_iff_acyclic {α : Type} {R : α → α →
         exact Relation.TransGen.trans hxy hyz
       exact htransitive
 
+-- a) De Ordem Parcial Estrita para Ordem Parcial Reflexiva
+def StrictToReflexive {α : Type} (R : α → α → Prop) : α → α → Prop :=
+  fun a b => R a b ∨ a = b
+
+lemma PartialOrder_to_ReflexivePartialOrder {α : Type} (R : α → α → Prop) (h : Partial_Order R) :
+  Reflexive_Partial_Order (StrictToReflexive R) := by
+  constructor
+  · -- Quasi_Order (Reflexiva e Transitiva)
+    constructor
+    · -- Reflexiva
+      intro x
+      right
+      exact rfl
+    · -- Transitiva
+      intro x y z hxy hyz
+      rcases hxy with hxy | rfl
+      · rcases hyz with hyz | rfl
+        · left
+          exact h.2 x y z hxy hyz
+        · left
+          exact hxy
+      · exact hyz
+  · -- Anti_Symmetric
+    intro x y hxy hyx
+    rcases hxy with hxy | rfl
+    · rcases hyx with hyx | rfl
+      · -- Se R x y e R y x, a transitividade gera R x x (contradizendo a irreflexividade)
+        exfalso
+        have hxx : R x x := h.2 x y x hxy hyx
+        exact h.1 x hxx
+      · rfl
+    · rfl
+
+
+-- b) De Ordem Parcial Reflexiva para Ordem Parcial Estrita
+def ReflexiveToStrict {α : Type} (R : α → α → Prop) : α → α → Prop :=
+  fun a b => R a b ∧ a ≠ b
+
+lemma ReflexivePartialOrder_to_PartialOrder {α : Type} (R : α → α → Prop)
+(h : Reflexive_Partial_Order R) :
+  Partial_Order (ReflexiveToStrict R) := by
+  constructor
+  · -- Irreflexiva
+    intro x hxx
+    exact hxx.2 rfl
+  · -- Transitiva
+    intro x y z hxy hyz
+    constructor
+    · exact h.1.2 x y z hxy.1 hyz.1
+    · intro hxz
+      -- Se x = z, reescrevemos x por z nas hipóteses
+      rw [hxz] at hxy
+      -- Pela antissimetria, R z y e R y z implica z = y
+      have heq : z = y := h.2 z y hxy.1 hyz.1
+      -- Contradição com a restrição z ≠ y
+      exact hxy.2 heq
+
+
+-- c) De Quase-Ordem para Ordem Parcial Estrita (Corrigido via assimetria)
+def QuasiToStrict {α : Type} (R : α → α → Prop) : α → α → Prop :=
+  fun a b => R a b ∧ ¬(R b a)
+
+lemma QuasiOrder_to_PartialOrder {α : Type} (R : α → α → Prop) (h : Quasi_Order R) :
+  Partial_Order (QuasiToStrict R) := by
+  constructor
+  · -- Irreflexiva
+    intro x hxx
+    exact hxx.2 hxx.1
+  · -- Transitiva
+    intro x y z hxy hyz
+    constructor
+    · exact h.2 x y z hxy.1 hyz.1
+    · intro hzx
+      -- Se R z x, usando R x y e a transitividade, teríamos R z y
+      have hzy : R z y := h.2 z x y hzx hxy.1
+      -- Contradição com a restrição ¬R z y que vem de hyz
+      exact hyz.2 hzy
+
 -- ---------------------------------------------------------
 -- PRODUTO LEXICOGRÁFICO
 -- ---------------------------------------------------------
