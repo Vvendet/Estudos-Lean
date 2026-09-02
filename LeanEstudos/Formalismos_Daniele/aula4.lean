@@ -17,7 +17,7 @@ def Partial_Order {α : Type} (R : α → α → Prop) : Prop :=
   Relation.Irreflexive R ∧ Relation.Transitive R
 
 def Total_Order {α : Type} (R : α → α → Prop) : Prop :=
-  Partial_Order R ∧ ∀ x y, (R x y ∨ R y x)
+  Partial_Order R ∧ ∀ x y, (R x y ∨ x = y ∨  R y x)
 
 def Quasi_Order {α : Type} (R : α → α → Prop) : Prop :=
   Relation.Reflexive R ∧ Relation.Transitive R
@@ -47,18 +47,19 @@ lemma Partial_Order.anti_symmetric {α : Type} {R : α → α → Prop} (h : Par
     exact htrans
   exact h.1 x hcycle
 
+-- Todas as ordens parciais são assimétricas
+lemma Partial_Order.asymmetric {α : Type} {R : α → α → Prop} (h : Partial_Order R) :
+  ∀ x y, R x y → ¬ R y x := by
+  intro x y hxy hyx
+  have hcycle : R x x := by
+    have htrans := h.2 x y x hxy hyx
+    exact htrans
+  exact h.1 x hcycle
+
 lemma Total_Order.partial_order {α : Type} {R : α → α → Prop} (h : Total_Order R) :
   Partial_Order R := h.1
 
-lemma Total_Order.quasi_order {α : Type} {R : α → α → Prop} (h : Total_Order R) :
-  Quasi_Order R := by
-  constructor
-  · intro x
-    have htotal := h.2 x x
-    cases htotal with
-    | inl hxx => exact hxx
-    | inr hxx => exact hxx
-  · exact h.partial_order.2
+
 
 lemma Reflexive_Partial_Order.quasi_order {α : Type} {R : α → α → Prop}
  (h : Reflexive_Partial_Order R) :
@@ -124,3 +125,91 @@ lemma Lexicographic_Order_PartialOrder {α β : Type} {Ra : α → α → Prop} 
         constructor
         · exact Eq.trans heq12 heq23
         · exact hb.2 p1.2 p2.2 p3.2 hb12 hb23
+
+lemma Lexicographic_Order_TotalOrder {α β : Type} {Ra : α → α → Prop} {Rb : β → β → Prop}
+  (ha : Total_Order Ra) (hb : Total_Order Rb) : Total_Order (Lexicographic_Order Ra Rb) := by
+  constructor
+  · exact Lexicographic_Order_PartialOrder ha.1 hb.1
+  · intro p1 p2
+    -- Analisamos a tricotomia na primeira componente
+    rcases ha.2 p1.1 p2.1 with h1 | h1_eq | h1_rev
+    · left
+      left
+      exact h1
+    · -- Se as primeiras componentes são iguais, analisamos a segunda
+      rcases hb.2 p1.2 p2.2 with h2 | h2_eq | h2_rev
+      · left
+        right
+        exact ⟨h1_eq, h2⟩
+      · right
+        left
+        -- Usa Prod.ext para provar a igualdade no tipo produto
+        apply Prod.ext
+        · exact h1_eq
+        · exact h2_eq
+      · right
+        right
+        right
+        exact ⟨h1_eq.symm, h2_rev⟩
+    · right
+      right
+      left
+      exact h1_rev
+
+lemma Lexicographic_Order_WellFounded {α β : Type} {Ra : α → α → Prop} {Rb : β → β → Prop}
+  (hwa : WellFounded Ra) (hwb : WellFounded Rb) : WellFounded (Lexicographic_Order Ra Rb) := by
+  constructor
+  -- Um elemento do produto é acessível se todas as suas reduções forem acessíveis
+  intro ⟨a, b⟩
+  revert b
+  -- Indução na primeira componente baseada na boa-fundação de Ra
+  induction a using hwa.induction with
+  | h a iha =>
+    intro b
+    -- Indução na segunda componente baseada na boa-fundação de Rb
+    induction b using hwb.induction with
+    | h b ihb =>
+      apply Acc.intro
+      intro ⟨a', b'⟩ hp
+      unfold Lexicographic_Order at hp
+      rcases hp with h_ra | ⟨h_eq, h_rb⟩
+      · -- Caso Ra a' a: usamos a hipótese de indução iha
+        exact iha a' h_ra b'
+      · -- Caso a' = a e Rb b' b: substituímos a igualdade e usamos ihb
+        subst h_eq
+        exact ihb b' h_rb
+
+-- Uma regra de reescrita é um par de palavras
+abbrev Rule (α : Type) := List α × List α
+
+-- Um Sistema de Reescrita de Palavras (Semi-Thue System) é um conjunto de regras
+abbrev SRS (α : Type) := Set (Rule α)
+
+-- Agora a notação de pertinência (∈) funcionará perfeitamente:
+def WordReduces {α : Type} (R : SRS α) (u v : List α) : Prop :=
+  ∃ (l r x y : List α),
+    (l, r) ∈ R ∧
+    u = x ++ l ++ y ∧
+    v = x ++ r ++ y
+
+-- Conectando a infraestrutura concreta de palavras com a teoria abstrata de ARS:
+-- Podemos instanciar um Sistema Abstrato de Redução cujos elementos são List α
+def SRS_to_ARS {α : Type} (R : SRS α) : ARS (List α) where
+  red := { p | WordReduces R p.1 p.2 }
+
+lemma WordReduces_context
+    {α : Type} (R : SRS α) (u v prefix_word suffix_word : List α)
+    (h : WordReduces R u v) :
+    WordReduces R (prefix_word ++ u ++ suffix_word) (prefix_word ++ v ++ suffix_word) := by
+  -- Desestruturamos a hipótese h para extrair a regra e os contextos originais (x e y)
+  rcases h with ⟨l, r, x, y, h_rule, hu, hv⟩
+  -- Propomos a mesma regra (l, r), mas com os novos contextos expandidos
+  refine ⟨l, r, prefix_word ++ x, y ++ suffix_word, h_rule, ?_, ?_⟩
+  · -- Substituímos u pela sua definição original
+    rw [hu]
+    -- A tática simp aplica automaticamente a associatividade do List.append
+    simp
+  · -- Substituímos v pela sua definição original
+    rw [hv]
+    -- A tática simp normaliza os agrupamentos da concatenação
+    simp
