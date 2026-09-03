@@ -37,6 +37,7 @@ def ARS.transitiveClosure {α : Type} (R : ARS α) : SetRel α α :=
 def ReducesPlus {α : Type} (R : ARS α) (a b : α) : Prop :=
   (a, b) ∈ ARS.transitiveClosure R
 
+
 def ARS.reflTransClosure {α : Type} (R : ARS α) : SetRel α α := -- A relação de redução
                                                                 -- reflexiva e transitiva
   R.transitiveClosure ∪ ARS.id α
@@ -84,6 +85,7 @@ def ReducesReflSymmTrans {α : Type} (R : ARS α) (a b : α) : Prop :=
 
 def IsNormal {α : Type} (R : ARS α) (x : α) : Prop :=
   ∀ y, ¬ Reduces R x y
+
 
 
 def WeaklyNormalizing {α : Type} (R : ARS α) : Prop :=
