@@ -35,3 +35,12 @@ lemma reflTransGen_mono {α : Type} {R S : α → α → Prop} (h : ∀ a b, R a
   induction h_gen with
   | refl => exact Relation.ReflTransGen.refl
   | tail _ h_step ih => exact Relation.ReflTransGen.tail ih (h _ _ h_step)
+
+
+def Subcommutes {α : Type} (R_alpha R_beta : α → α → Prop) : Prop :=
+  ∀ a b, (Relation.Comp (Relation.ReflTransGen R_alpha) (Relation.ReflTransGen R_beta)) a b →
+         (Relation.Comp (Relation.ReflTransGen R_beta) (Relation.ReflTransGen R_alpha)) a b
+
+def Commutes {α : Type} (R_alpha R_beta : α → α → Prop) : Prop :=
+  ∀ a b, (Relation.Comp (Relation.ReflTransGen R_alpha) (Relation.ReflTransGen R_beta)) a b →
+         (Relation.Comp (Relation.ReflTransGen R_beta) (Relation.ReflTransGen R_alpha)) a b
