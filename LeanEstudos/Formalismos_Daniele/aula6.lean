@@ -37,13 +37,21 @@ lemma reflTransGen_mono {α : Type} {R S : α → α → Prop} (h : ∀ a b, R a
   | tail _ h_step ih => exact Relation.ReflTransGen.tail ih (h _ _ h_step)
 
 
+/-- Definição 2.4.3: Subcomutação entre R_alpha e R_beta.
+    Matematicamente: ←_α · →_β ⊆ →_β^= · ←_α^=
+    Lê-se: Se 'a' diverge para 'b' (1 passo de α) e para 'c' (1 passo de β),
+    então 'b' e 'c' convergem para um 'd', onde β dá 'N' passos e α dá no máximo '1' passo. -/
 def Subcommutes {α : Type} (R_alpha R_beta : α → α → Prop) : Prop :=
-  ∀ a b, (Relation.Comp (Relation.ReflTransGen R_alpha) (Relation.ReflTransGen R_beta)) a b →
-         (Relation.Comp (Relation.ReflTransGen R_beta) (Relation.ReflTransGen R_alpha)) a b
+  ∀ a b c, R_alpha a b → R_beta a c →
+    ∃ d, (R_alpha b d ∨ b = d) ∧ (R_alpha c d ∨ c = d)
 
+/-- Definição 2.4.3: Comutação entre R_alpha e R_beta.
+    Matematicamente: ←_α^* · →_β^* ⊆ →_β^* · ←_α^*
+    Lê-se: Se 'a' diverge para 'b' (N passos de α) e para 'c' (N passos de β),
+    então eles convergem para um 'd' com N passos de ambos os lados. -/
 def Commutes {α : Type} (R_alpha R_beta : α → α → Prop) : Prop :=
-  ∀ a b, (Relation.Comp (Relation.ReflTransGen R_alpha) (Relation.ReflTransGen R_beta)) a b →
-         (Relation.Comp (Relation.ReflTransGen R_beta) (Relation.ReflTransGen R_alpha)) a b
+  ∀ a b c, Relation.ReflTransGen R_alpha a b → Relation.ReflTransGen R_beta a c →
+    ∃ d, Relation.ReflTransGen R_beta b d ∧ Relation.ReflTransGen R_alpha c d
 
 lemma IsConfluent_if_DiamondStar {α : Type} (R : ARS α) (S : α → α → Prop)
     (h_diamond : DiamondProperty S)
@@ -96,4 +104,32 @@ lemma IsConfluent_if_DiamondStar {α : Type} (R : ARS α) (S : α → α → Pro
   exact h_S_diam a b hab c hac
 
 /-- lema de Hindley-Rosen
-    Seja R um ARS. Se para todo α, β em I -/
+    Seja R um ARS. Se para todo α, β em I, ->_α comuta com ->β então IsConfluent R -/
+
+lemma Hindley_Rosen {α : Type} (R : ARS α) (I : Type) (R_i : I → α → α → Prop)
+    -- Ajustado de (∀ i) para (∃ i) para modelar corretamente a propriedade de união
+    (h_sub : ∀ a b, Reduces R a b → ∃ i, R_i i a b)
+    (h_sup : ∀ i a b, R_i i a b → ReducesStar R a b)
+    (h_commute : ∀ i j, Commutes (R_i i) (R_i j)) :
+    IsConfluent R := by
+  let S : α → α → Prop := fun a b => ∃ i, Relation.ReflTransGen (R_i i) a b
+  have h_diamond : DiamondProperty S := by
+    intro a b c hab hac
+    rcases hab with ⟨i, hab_i⟩
+    rcases hac with ⟨j, hac_j⟩
+    rcases h_commute i j a b c hab_i hac_j with ⟨d, hbd_j, hcd_i⟩
+    exact ⟨d, ⟨j, hbd_j⟩, ⟨i, hcd_i⟩⟩
+  have h_S_sub : ∀ a b, Reduces R a b → S a b := by
+    intro a b hab
+    rcases h_sub a b hab with ⟨i, hab_i⟩
+    exact ⟨i, Relation.ReflTransGen.single hab_i⟩
+  have h_S_sup : ∀ a b, S a b → ReducesStar R a b := by
+    intro a b hab
+    rcases hab with ⟨i, hab_i⟩
+    apply ReducesStar_iff_ReducesStar'.mpr
+    induction hab_i with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h_step ih =>
+      have h_step_star := ReducesStar_iff_ReducesStar'.mp (h_sup i _ _ h_step)
+      exact Relation.ReflTransGen.trans ih h_step_star
+  exact IsConfluent_if_DiamondStar R S h_diamond h_S_sub h_S_sup
