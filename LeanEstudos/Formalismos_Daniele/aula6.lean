@@ -187,7 +187,6 @@ lemma ReducesEqual_to_ReducesStar {α : Type} (R : ARS α) {a b : α}
   · -- Caso 1: 'a' reduz para 'b' em exatamente um passo.
     -- Aplicamos diretamente o seu lema pré-existente da aula1.lean
     exact Reduces.toReducesStar h_red
-
   · -- Caso 2: 'a' é igual a 'b' (zero passos).
     -- Expandimos o fecho para utilizar a relação de identidade.
     rw [ReducesStar, ARS.reflTransClosure]
@@ -228,3 +227,9 @@ IsConfluent R := by
   constructor
   · exact ReducesStar_iff_ReducesStar'.mpr hbd
   · exact ReducesStar_iff_ReducesStar'.mpr hcd
+
+def Refines {α : Type} (R1 R2 : α → α → Prop) : Prop :=
+  ∀ a b, R1 a b → Relation.ReflTransGen R2 a b
+
+def CompatibleRefinement {α : Type} (R1 R2 : α → α → Prop) : Prop :=
+  Refines R1 R2 ∧ Refines R2 R1
