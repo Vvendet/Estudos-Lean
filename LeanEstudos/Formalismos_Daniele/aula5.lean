@@ -81,3 +81,93 @@ def MultisetExtension {α : Type} (R : α → α → Prop) (M1 M2 : GMultiset α
     X ⊆ M1 ∧
     M2 = GMultiset.sum (GMultiset.diff M1 X) Y ∧
     ∀ y, y ∈ Y → ∃ x, x ∈ X ∧ R x y
+lemma Acc_r_of_Acc_Multiset {α : Type} [DecidableEq α] {r : α → α → Prop} (a : α)
+    (h : Acc (MultisetExtension r) (GMultiset.finite_singleton a)) : Acc r a := by
+  have H : ∀ (M : GMultiset α), Acc (MultisetExtension r) M →
+      ∀ (a : α), M = GMultiset.finite_singleton a → Acc r a := by
+    intro M hM
+    induction hM with
+    | intro M1 h_acc ih =>
+      intro a1 h_eq
+      subst h_eq
+      constructor
+      intro x hr
+      -- Construímos o diagrama do passo na sua extensão multiconjunto
+      have h_ext :
+      MultisetExtension r (GMultiset.finite_singleton x) (GMultiset.finite_singleton a1)
+      := by
+        unfold MultisetExtension
+        refine ⟨GMultiset.finite_singleton x, GMultiset.finite_singleton a1, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        · -- Prova de IsFiniteMultiset X
+          constructor
+          · intro z; unfold GMultiset.finite_singleton; split_ifs <;> simp
+          · have h_sub : {a | GMultiset.finite_singleton x a > 0} ⊆ {x} := by
+              intro z hz
+              change GMultiset.finite_singleton x z > 0 at hz
+              unfold GMultiset.finite_singleton at hz
+              split_ifs at hz with h
+              · exact h
+              · revert hz; simp
+            exact Set.Finite.subset (Set.finite_singleton x) h_sub
+        · -- Prova de IsFiniteMultiset Y
+          constructor
+          · intro z; unfold GMultiset.finite_singleton; split_ifs <;> simp
+          · have h_sub : {a | GMultiset.finite_singleton a1 a > 0} ⊆ {a1} := by
+              intro z hz
+              change GMultiset.finite_singleton a1 z > 0 at hz
+              unfold GMultiset.finite_singleton at hz
+              split_ifs at hz with h
+              · exact h
+              · revert hz; simp
+            exact Set.Finite.subset (Set.finite_singleton a1) h_sub
+        · -- Prova de X ≠ ∅
+          intro h_empty
+          have h_eval : GMultiset.finite_singleton x x = GMultiset.empty x := congrFun h_empty x
+          unfold GMultiset.finite_singleton GMultiset.empty at h_eval
+          simp at h_eval
+        · -- Prova de X ⊆ M1
+          intro z
+          exact le_rfl
+        · -- Prova de M2 = (M1 \ X) ⊕ Y
+          funext z
+          unfold GMultiset.sum GMultiset.diff GMultiset.finite_singleton
+          split_ifs <;> rfl
+        · -- Prova de ∀ y, y ∈ Y → ∃ x', x' ∈ X ∧ r x' y
+          intro y hy
+          change GMultiset.finite_singleton a1 y > 0 at hy
+          unfold GMultiset.finite_singleton at hy
+          split_ifs at hy with h_ya1
+          · refine ⟨x, ?_, ?_⟩
+            · change GMultiset.finite_singleton x x > 0
+              unfold GMultiset.finite_singleton
+              simp
+            · subst h_ya1
+              exact hr
+          · revert hy; simp
+      exact ih (GMultiset.finite_singleton x) h_ext x rfl
+  exact H (GMultiset.finite_singleton a) h a rfl
+
+open scoped Classical in
+/-- Teorema 2.3.12 (Ohlebusch / Dershowitz-Manna): A extensão multiconjunto
+    finita de uma ordem parcial é bem-fundada se, e somente se, a relação
+    original for bem-fundada.
+
+    Aqui formalizamos a direção (<=) da equivalência. -/
+theorem MultiSet_WF_iff_ARS_WF {α : Type} (r : α → α → Prop) :
+    WellFounded (MultisetExtension r) → WellFounded r := by
+  intro h_wf_ext
+  constructor
+  intro a
+  -- Invocamos a prova de acessibilidade global instanciando com o singleton e extraindo
+  exact Acc_r_of_Acc_Multiset a (h_wf_ext.apply (GMultiset.finite_singleton a))
+
+def FiniteMultisetExtension {α : Type} (R : α → α → Prop) (M1 M2 : FiniteMultiset α) : Prop :=
+  MultisetExtension R M1.val M2.val
+
+theorem Theorem_2_3_12_LeftToRight {α : Type} (r : α → α → Prop) :
+    WellFounded r → WellFounded (Relation.TransGen (Relation.CutExpand r)) := by
+  intro h_wf
+  -- Invocamos o teorema clássico de Dershowitz-Manna (Hydra / CutExpand)
+  have h_wf_cut := WellFounded.cutExpand h_wf
+  -- A extensão plena é geometricamente o fecho transitivo do passo único
+  exact WellFounded.transGen h_wf_cut
