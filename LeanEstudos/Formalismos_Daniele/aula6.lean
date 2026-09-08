@@ -105,7 +105,6 @@ lemma IsConfluent_if_DiamondStar {α : Type} (R : ARS α) (S : α → α → Pro
 
 /-- lema de Hindley-Rosen
     Seja R um ARS. Se para todo α, β em I, ->_α comuta com ->β então IsConfluent R -/
-
 lemma Hindley_Rosen {α : Type} (R : ARS α) (I : Type) (R_i : I → α → α → Prop)
     -- Ajustado de (∀ i) para (∃ i) para modelar corretamente a propriedade de união
     (h_sub : ∀ a b, Reduces R a b → ∃ i, R_i i a b)
@@ -133,3 +132,51 @@ lemma Hindley_Rosen {α : Type} (R : ARS α) (I : Type) (R_i : I → α → α �
       have h_step_star := ReducesStar_iff_ReducesStar'.mp (h_sup i _ _ h_step)
       exact Relation.ReflTransGen.trans ih h_step_star
   exact IsConfluent_if_DiamondStar R S h_diamond h_S_sub h_S_sup
+
+/-- Corolário 2.4.5: A união de duas relações confluentes e que comutam é confluente. -/
+lemma Corollary_2_4_5 {α : Type} (R : ARS α) (R1 R2 : α → α → Prop)
+    -- A redução original R atua como a união de R1 e R2
+    (h_sub : ∀ a b, Reduces R a b → R1 a b ∨ R2 a b)
+    -- Ambas as relações pertencem ao fecho de R
+    (h_sup1 : ∀ a b, R1 a b → ReducesStar R a b)
+    (h_sup2 : ∀ a b, R2 a b → ReducesStar R a b)
+    -- As relações são confluentes (comutam consigo mesmas) e comutam entre si
+    (h_conf1 : Commutes R1 R1)
+    (h_conf2 : Commutes R2 R2)
+    (h_comm : Commutes R1 R2) :
+    IsConfluent R := by
+  -- O Corolário 2.4.5 é um caso especial do Lema de Hindley-Rosen onde o conjunto
+  -- de índices tem apenas dois elementos.
+  -- Usaremos Bool (true / false) como nossa "chave" de índices.
+  let R_i : Bool → α → α → Prop := fun b => match b with
+    | true => R1
+    | false => R2
+  apply Hindley_Rosen R Bool R_i
+  · -- h_sub: Mapeamos a disjunção lógica para a prova de existência (∃ i)
+    intro a b hab
+    rcases h_sub a b hab with h1 | h2
+    · exact ⟨true, h1⟩
+    · exact ⟨false, h2⟩
+  · -- h_sup: A aplicação do limite superior divide-se naturalmente nos dois casos
+    intro i a b
+    match i with
+    | true => exact h_sup1 a b
+    | false => exact h_sup2 a b
+  · -- h_commute: Verificamos a comutação para todos os pares cruzados (i, j)
+    intro i j
+    match i, j with
+    | true, true =>
+      -- R1 comuta com R1 (Confluência de R1)
+      exact h_conf1
+    | false, false =>
+      -- R2 comuta com R2 (Confluência de R2)
+      exact h_conf2
+    | true, false =>
+      -- R1 comuta com R2 (Hipótese de comutação)
+      exact h_comm
+    | false, true =>
+      -- R2 comuta com R1 (Simetria da comutação)
+      intro a b c h2 h1
+      -- Invertemos a ordem das variáveis no diagrama para reaproveitar h_comm
+      rcases h_comm a c b h1 h2 with ⟨d, hd2, hd1⟩
+      exact ⟨d, hd1, hd2⟩
