@@ -180,3 +180,51 @@ lemma Corollary_2_4_5 {α : Type} (R : ARS α) (R1 R2 : α → α → Prop)
       -- Invertemos a ordem das variáveis no diagrama para reaproveitar h_comm
       rcases h_comm a c b h1 h2 with ⟨d, hd2, hd1⟩
       exact ⟨d, hd1, hd2⟩
+
+lemma ReducesEqual_to_ReducesStar {α : Type} (R : ARS α) {a b : α}
+(h : Reduces R a b ∨ a = b) : ReducesStar R a b := by
+  rcases h with h_red | rfl
+  · -- Caso 1: 'a' reduz para 'b' em exatamente um passo.
+    -- Aplicamos diretamente o seu lema pré-existente da aula1.lean
+    exact Reduces.toReducesStar h_red
+
+  · -- Caso 2: 'a' é igual a 'b' (zero passos).
+    -- Expandimos o fecho para utilizar a relação de identidade.
+    rw [ReducesStar, ARS.reflTransClosure]
+    right -- Entramos no lado direito da união (ARS.id)
+    rw [ARS.id]
+    -- Provemos que o par (a, a) pertence ao conjunto universo
+    exact ⟨a, Set.mem_univ a, rfl⟩
+
+/-- Fatos:
+    Toda relação subcomutativa consigo mesma é fortemente confluente
+    Toda relação comutativa com si mesma é confluente
+-/
+lemma Subcommutes_to_StrongConfluence {α : Type} (R : ARS α)
+(h_sub : Subcommutes (Reduces R) (Reduces R)) :
+StronglyConfluent R := by
+  intro a b c hab hac
+  unfold Subcommutes at h_sub
+  rcases h_sub a b c hab hac with ⟨d, hbd, hcd⟩
+  exists d
+  constructor
+  · have hbd_star : ReducesStar R b d := ReducesEqual_to_ReducesStar R hbd
+    exact hbd_star
+  · have hcd_dc : Reduces R c d ∨ d = c := by
+      cases hcd with
+      | inl hcd => exact Or.inl hcd
+      | inr h_eq => exact Or.inr h_eq.symm
+    exact hcd_dc
+
+lemma Commutes_to_Confluence {α : Type} (R : ARS α)
+(h_comm : Commutes (Reduces R) (Reduces R)) :
+IsConfluent R := by
+  intro a b c hab hac
+  unfold Commutes at h_comm
+  have hab' : Relation.ReflTransGen (Reduces R) a b := ReducesStar_iff_ReducesStar'.mp hab
+  have hac' : Relation.ReflTransGen (Reduces R) a c := ReducesStar_iff_ReducesStar'.mp hac
+  rcases h_comm a b c hab' hac' with ⟨d, hbd, hcd⟩
+  exists d
+  constructor
+  · exact ReducesStar_iff_ReducesStar'.mpr hbd
+  · exact ReducesStar_iff_ReducesStar'.mpr hcd
