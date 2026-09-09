@@ -33,7 +33,7 @@ def ReducesModulo {α : Type} (R : ARS_Mod α) (a b : α) : Prop :=
   ∃ c d, sim R a c ∧ Reduces R.toARS c d ∧ sim R d b
 
 -- ---------------------------------------------------------
--- Definição 2.5.2: Propriedades Módulo (Tradução Corrigida)
+-- Definição 2.5.2: Propriedades Módulo
 -- ---------------------------------------------------------
 
 /-- 1. Diamond Property Modulo ~ -/
@@ -56,6 +56,8 @@ def ConfluenceModulo {α : Type} (R : ARS_Mod α) : Prop :=
 /-- 5. Locally Confluent Modulo ~ (LCON~): ← · → ⊆ ↓~[cite: 1] -/
 def LocallyConfluentModulo {α : Type} (R : ARS_Mod α) : Prop :=
   ∀ a b c, Reduces R.toARS a b → Reduces R.toARS a c → IsJoinableModulo R b c
+
+
 
 /-- 7. Coherent with H (COHH): H · →* ⊆ ↓~[cite: 1] -/
 def CoherentWithH' {α : Type} (R : ARS_Mod α) : Prop :=
@@ -96,3 +98,71 @@ def StronglyCompatibleWithH {α : Type} (R : ARS_Mod α) : Prop :=
 def LocallyCommutingWithH {α : Type} (R : ARS_Mod α) : Prop :=
   ∀ a b c, R.H a b → Reduces R.toARS b c →
     ∃ d, ReducesPlus R.toARS a d ∧ sim R d c
+
+def StronglyLocallyConfluentModulo {α : Type} (R : ARS_Mod α) : Prop :=
+  ∀ a b c, Reduces R.toARS a b → Reduces R.toARS a c →
+    ∃ d e, ReducesEqual R.toARS b d ∧ sim R d e ∧ ReducesStar R.toARS c e
+
+-- ---------------------------------------------------------
+-- Lemas de Hierarquia da confluência módulo ~
+-- ---------------------------------------------------------
+
+lemma StronglyLocallyConfluenceModulo_to_LocallyConfluenceModulo {α : Type} (R : ARS_Mod α)
+(h : StronglyLocallyConfluentModulo R) : LocallyConfluentModulo R := by
+  intro a b c hab hac
+  rcases h a b c hab hac with ⟨d, e, hbd, hde, hce⟩
+  exists d, e
+  constructor
+  · have hbdstar : ReducesStar R.toARS b d := by
+        unfold ReducesEqual at hbd
+        exact ReducesEqual_to_ReducesStar R.toARS hbd
+    exact hbdstar
+  · constructor
+    · exact hde
+    · exact hce
+
+lemma ConfluenceModulo_to_LocallyConfluenceModulo {α : Type} (R : ARS_Mod α)
+(h : ConfluenceModulo R) : LocallyConfluentModulo R := by
+    intro a b c hab hac
+    unfold ConfluenceModulo at h
+    have h1 := h a b c (Reduces.toReducesStar hab) (Reduces.toReducesStar hac)
+    rcases h1 with ⟨d, e, hbd, hde, hce⟩
+    exact ⟨d, e, hbd, hde, hce⟩
+
+lemma AlmostChurchRosserModulo_to_ConfluenceModulo {α : Type} (R : ARS_Mod α)
+(h : AlmostChurchRosserModulo R) : ConfluenceModulo R := by
+    intro a b c hab hac
+    unfold AlmostChurchRosserModulo at h
+    have h1 := h a b a c hab (Relation.ReflTransGen.refl) hac
+    rcases h1 with ⟨d, e, hbd, hde, hce⟩
+    exact ⟨d, e, hbd, hde, hce⟩
+
+lemma ChurchRosserModulo_to_AlmostChurchRosserModulo {α : Type} (R : ARS_Mod α)
+    (h : ChurchRosserModulo R) : AlmostChurchRosserModulo R := by
+  intro a b c d hab hac hcd
+  unfold ChurchRosserModulo at h
+  -- 1. Convertemos as hipóteses para a versão indutiva
+  have hab_rtg := ReducesStar_iff_ReducesStar'.mp hab
+  have hcd_rtg := ReducesStar_iff_ReducesStar'.mp hcd
+  -- 2. Construir o caminho b ->* a em ConversionModulo
+  have hba : ConversionModulo R b a := by
+    clear hab
+    induction hab_rtg with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h_step ih =>
+      exact Relation.ReflTransGen.trans (Relation.ReflTransGen.single (Or.inr (Or.inl h_step))) ih
+  -- 3. Construir o caminho a ~ c em ConversionModulo
+  have hac' : ConversionModulo R a c := by
+    exact Relation.ReflTransGen.single (Or.inr (Or.inr hac))
+  -- 4. Construir o caminho c ->* d em ConversionModulo
+  have hcd' : ConversionModulo R c d := by
+    clear hcd
+    induction hcd_rtg with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h_step ih =>
+      exact Relation.ReflTransGen.trans ih (Relation.ReflTransGen.single (Or.inl h_step))
+  -- 5. Concatenar tudo: (b ->* a) trans (a ~ c) trans (c ->* d)
+  have hbc : ConversionModulo R b c := Relation.ReflTransGen.trans hba hac'
+  have hbd : ConversionModulo R b d := Relation.ReflTransGen.trans hbc hcd'
+  -- 6. Finalizar aplicando a hipótese Church-Rosser Módulo (CR~)
+  exact h b d hbd
