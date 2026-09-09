@@ -38,7 +38,9 @@ def ReducesModulo {α : Type} (R : ARS_Mod α) (a b : α) : Prop :=
 
 /-- 1. Diamond Property Modulo ~ -/
 def DiamondPropertyStarModulo {α : Type} (R : ARS_Mod α) : Prop :=
-  ∀ a b c, ReducesModulo R a b → ReducesModulo R a c → IsJoinableModulo R b c
+  ∀ a b c z1 z2, ReducesStar R.toARS a z1 → sim R z1 b →
+                 ReducesStar R.toARS a z2 → sim R z2 c →
+                 IsJoinableModulo R b c
 
 /-- 2. Church-Rosser Modulo ~ (CR~) -/
 def ChurchRosserModulo {α : Type} (R : ARS_Mod α) : Prop :=
@@ -166,3 +168,44 @@ lemma ChurchRosserModulo_to_AlmostChurchRosserModulo {α : Type} (R : ARS_Mod α
   have hbd : ConversionModulo R b d := Relation.ReflTransGen.trans hbc hcd'
   -- 6. Finalizar aplicando a hipótese Church-Rosser Módulo (CR~)
   exact h b d hbd
+
+lemma ChurchRosserModulo_to_DiamondPropertyStarModulo {α : Type} (R : ARS_Mod α)
+    (h : ChurchRosserModulo R) : DiamondPropertyStarModulo R := by
+  intro a b c z1 z2 haz1 hz1b haz2 hz2c
+  unfold ChurchRosserModulo at h
+  -- 1. Construir b ~ z1 em ConversionModulo (invertendo hz1b)
+  have hbz1 : ConversionModulo R b z1 := by
+    -- Nenhuma outra hipótese local depende de 'b', a indução é segura.
+    induction hz1b with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h_step ih =>
+      -- Invertemos a relação base H usando a prova de simetria embutida na estrutura
+      exact Relation.ReflTransGen.trans (Relation.ReflTransGen.single
+       (Or.inr (Or.inr (Relation.ReflTransGen.single (R.H_symm h_step))))) ih
+  -- 2. Construir z1 *<- a em ConversionModulo (invertendo haz1)
+  have hz1a : ConversionModulo R z1 a := by
+    have haz1_rtg := ReducesStar_iff_ReducesStar'.mp haz1
+    -- Limpamos as hipóteses que dependem de z1 apenas dentro deste escopo para proteger a indução
+    clear haz1 hz1b hbz1
+    induction haz1_rtg with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h_step ih =>
+      exact Relation.ReflTransGen.trans (Relation.ReflTransGen.single (Or.inr (Or.inl h_step))) ih
+  -- 3. Construir a ->* z2 em ConversionModulo
+  have haz2' : ConversionModulo R a z2 := by
+    have haz2_rtg := ReducesStar_iff_ReducesStar'.mp haz2
+    -- Limpamos as hipóteses que dependem de z2 apenas dentro deste escopo
+    clear haz2 hz2c
+    induction haz2_rtg with
+    | refl => exact Relation.ReflTransGen.refl
+    | tail _ h_step ih =>
+      exact Relation.ReflTransGen.trans ih (Relation.ReflTransGen.single (Or.inl h_step))
+  -- 4. Construir z2 ~ c em ConversionModulo
+  have hz2c' : ConversionModulo R z2 c := by
+    exact Relation.ReflTransGen.single (Or.inr (Or.inr hz2c))
+  -- 5. Concatenar todos os fragmentos: (b ~ z1) trans (z1 *<- a) trans (a ->* z2) trans (z2 ~ c)
+  have hba : ConversionModulo R b a := Relation.ReflTransGen.trans hbz1 hz1a
+  have hac : ConversionModulo R a c := Relation.ReflTransGen.trans haz2' hz2c'
+  have hbc : ConversionModulo R b c := Relation.ReflTransGen.trans hba hac
+  -- 6. Finalizar aplicando a hipótese Church-Rosser Módulo (CR~)
+  exact h b c hbc
