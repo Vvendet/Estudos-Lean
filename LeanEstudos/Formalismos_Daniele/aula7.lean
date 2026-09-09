@@ -69,17 +69,30 @@ def CoherentWithH {α : Type} (R : ARS_Mod α) : Prop :=
 def LocallyCoherentWithH {α : Type} (R : ARS_Mod α) : Prop :=
   ∀ a b c, R.H a b → Reduces R.toARS b c → IsJoinableModulo R a c
 
-def StronglyChoherentWithH {α : Type} (R : ARS_Mod α) : Prop :=
-  ∀ a b c, R.H a b → ReducesStar R.toARS a c → sim R a c → IsJoinableModulo R b c
+/-- 9. Strongly Coherent with H (SCOHH): H · →* · ~ ⊆ ↓~
+    Leitura: Se a H b →* c ~ d, então a e d são juntáveis módulo ~. -/
+def StronglyCoherentWithH {α : Type} (R : ARS_Mod α) : Prop :=
+  ∀ a b c d, R.H a b → ReducesStar R.toARS b c → sim R c d →
+    IsJoinableModulo R a d
 
+/-- 10. Compatible with H (COMH): H · →* ⊆ →* · ~[cite: 9]
+    Leitura: Se a H b →* c, deve existir um 'd' tal que a →* d ~ c. -/
 def CompatibleWithH {α : Type} (R : ARS_Mod α) : Prop :=
-  ∀ a b c, R.H a b → ReducesStar R.toARS a c → ReducesStar R.toARS  a b → sim R b c
+  ∀ a b c, R.H a b → ReducesStar R.toARS b c →
+    ∃ d, ReducesStar R.toARS a d ∧ sim R d c
 
+/-- Relação Auxiliar (já no seu código, está perfeita!) -/
 def ReducesEqual {α : Type} (R : ARS α) (a b : α) : Prop :=
   Reduces R a b ∨ a = b
 
+/-- 11. Strongly Compatible with H (SCOMH): H · → ⊆ →^= · ~[cite: 9]
+    Leitura: Se a H b → c, deve existir um 'd' tal que a →^= d ~ c. -/
 def StronglyCompatibleWithH {α : Type} (R : ARS_Mod α) : Prop :=
-  ∀ a b c, R.H a b → Reduces R.toARS b c → ReducesEqual R.toARS a b → sim R b c
+  ∀ a b c, R.H a b → Reduces R.toARS b c →
+    ∃ d, ReducesEqual R.toARS a d ∧ sim R d c
 
-def LocallyCommuting {α : Type} (R : ARS_Mod α) : Prop :=
-    ∀ a b c, R.H a b → Reduces R.toARS b c → ReducesPlus R.toARS  a b → sim R b c
+/-- 12. Locally Commuting with H (LCMUH): H · → ⊆ →^+ · ~[cite: 9]
+    Leitura: Se a H b → c, deve existir um 'd' tal que a →^+ d ~ c. -/
+def LocallyCommutingWithH {α : Type} (R : ARS_Mod α) : Prop :=
+  ∀ a b c, R.H a b → Reduces R.toARS b c →
+    ∃ d, ReducesPlus R.toARS a d ∧ sim R d c
