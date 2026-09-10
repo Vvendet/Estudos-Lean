@@ -85,7 +85,7 @@ def CompatibleWithH {α : Type} (R : ARS_Mod α) : Prop :=
   ∀ a b c, R.H a b → ReducesStar R.toARS b c →
     ∃ d, ReducesStar R.toARS a d ∧ sim R d c
 
-/-- Relação Auxiliar (já no seu código, está perfeita!) -/
+/-- Relação Auxiliar  -/
 def ReducesEqual {α : Type} (R : ARS α) (a b : α) : Prop :=
   Reduces R a b ∨ a = b
 
