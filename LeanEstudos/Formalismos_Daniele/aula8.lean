@@ -34,19 +34,3 @@ lemma Coherent_to_LocallyCoherent {α : Type} (R : ARS_Mod α)
   -- LCOH H foca em passos únicos, basta elevar o passo para a relação de múltiplos (→*)
   have hbc_star : ReducesStar R.toARS b c := Reduces.toReducesStar hbc
   exact h a b c hab hbc_star
-
-/-- Caminho Lateral: LCMU H ⇒ LCOH H -/
-lemma LocallyCommuting_to_LocallyCoherent {α : Type} (R : ARS_Mod α)
-    (h : LocallyCommutingWithH R) : LocallyCoherentWithH R := by
-  intro a b c hab hbc
-  -- Expandimos o diagrama do Commuting (que nos dá um passo a →+ d)
-  rcases h a b c hab hbc with ⟨d, had, hdc⟩
-  exists d, c
-  constructor
-  · -- Como 'a' reduz para 'd' em passos positivos (ReducesPlus),
-    -- está garantido que reduz no fecho reflexivo-transitivo (ReducesStar)
-    rw [ReducesStar, ARS.reflTransClosure]
-    exact Or.inl had
-  · constructor
-    · exact hdc
-    · exact ReducesStar_iff_ReducesStar'.mpr Relation.ReflTransGen.refl
