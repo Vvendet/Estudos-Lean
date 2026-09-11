@@ -4,6 +4,14 @@ import LeanEstudos.Formalismos_Daniele.aula8
 -- Proposição 2.5.6 (Ciclo Completo)
 -- ---------------------------------------------------------
 
+/-- Coerência Módulo ~ (COH~): ~ · →* ⊆ ↓~ -/
+def CoherentModulo {α : Type} (R : ARS_Mod α) : Prop :=
+  ∀ a b c, sim R a b → ReducesStar R.toARS b c → IsJoinableModulo R a c
+
+/-- Coerência Forte Módulo ~ (SCOH~): ~ · →* · ~ ⊆ ↓~ -/
+def StronglyCoherentModulo {α : Type} (R : ARS_Mod α) : Prop :=
+  ∀ a b c d, sim R a b → ReducesStar R.toARS b c → sim R c d → IsJoinableModulo R a d
+
 /-- Lema auxiliar: A equivalência 'sim' é simétrica. -/
 lemma sim_symm {α : Type} (R : ARS_Mod α) {x y : α} (h : sim R x y) : sim R y x := by
   induction h with
@@ -12,6 +20,75 @@ lemma sim_symm {α : Type} (R : ARS_Mod α) {x y : α} (h : sim R x y) : sim R y
     have hvu : sim R _ _ := Relation.ReflTransGen.single (R.H_symm hstep)
     exact Relation.ReflTransGen.trans hvu ih
 
+/-- Proposição 2.5.6 (Parte 2.1): Diamond(→* · ~) ⇒ CON~
+    A confluência é o diamante onde as equivalências da ponta são nulas. -/
+lemma DiamondPropertyStarModulo_to_ConfluenceModulo {α : Type} (R : ARS_Mod α)
+    (h : DiamondPropertyStarModulo R) : ConfluenceModulo R := by
+  intro a b c hab hac
+  have hbb : sim R b b := Relation.ReflTransGen.refl
+  have hcc : sim R c c := Relation.ReflTransGen.refl
+  exact h a b c b c hab hbb hac hcc
+
+/-- Proposição 2.5.6 (Parte 2.2): Diamond(→* · ~) ⇒ SCOH~
+    A coerência forte é o diamante onde o lado esquerdo não reduz (b →* b). -/
+lemma DiamondPropertyStarModulo_to_StronglyCoherentModulo {α : Type} (R : ARS_Mod α)
+    (h : DiamondPropertyStarModulo R) : StronglyCoherentModulo R := by
+  intro a b c d hab hbc hcd
+  -- Reorganizamos a hipótese a ~ b →* c ~ d para a base do Diamante
+  have hbb : ReducesStar R.toARS b b := ReducesStar_iff_ReducesStar'.mpr Relation.ReflTransGen.refl
+  have hba : sim R b a := sim_symm R hab
+  -- Instanciamos o Diamante partindo de 'b'
+  exact h b a d b c hbb hba hbc hcd
+
+/-- Proposição 2.5.6 (Parte 3): CON~ + SCOH~ ⇒ CR~ -/
+lemma CON_and_SCOH_to_CR {α : Type} (R : ARS_Mod α)
+    (hCON : ConfluenceModulo R)
+    (hSCOH : StronglyCoherentModulo R) : ChurchRosserModulo R := by
+  intro a b hab
+  -- Fazemos indução na cadeia Reflexiva-Transitiva da Conversão (a ≈ b)[cite: 1]
+  induction hab with
+  | refl =>
+    -- Caso base: 0 passos. a e a são juntáveis.
+    exists a, a
+    constructor
+    · exact ReducesStar_iff_ReducesStar'.mpr Relation.ReflTransGen.refl
+    · constructor
+      · exact Relation.ReflTransGen.refl
+      · exact ReducesStar_iff_ReducesStar'.mpr Relation.ReflTransGen.refl
+  | @tail a1 b1 h_prefix h_step ih =>
+    -- Hipótese indutiva: 'a' e 'a1' são juntáveis (a →* c ~ d *← a1)[cite: 1]
+    rcases ih with ⟨c, d, hac, hcd, ha1d⟩
+    -- Analisamos o passo individual a1 ↔ b1
+    rcases h_step with h_red | h_inv | h_sim
+    · -- Caso (ii) do livro: a1 → b1[cite: 1]
+      have ha1b1 : ReducesStar R.toARS a1 b1 := Reduces.toReducesStar h_red
+      -- Aplicamos CON~ em a1 →* d e a1 →* b1
+      rcases hCON a1 d b1 ha1d ha1b1 with ⟨e, f, hde, hef, hb1f⟩
+      -- Aplicamos SCOH~ em c ~ d →* e ~ f
+      rcases hSCOH c d e f hcd hde hef with ⟨g, h, hcg, hgh, hfh⟩
+      exists g, h
+      constructor
+      · exact ReducesStar.trans hac hcg
+      · constructor
+        · exact hgh
+        · exact ReducesStar.trans hb1f hfh
+    · -- Caso (iii) do livro: b1 → a1[cite: 1]
+      have hb1a1 : ReducesStar R.toARS b1 a1 := Reduces.toReducesStar h_inv
+      -- Colapsamos a redução: b1 → a1 →* d
+      have hb1d : ReducesStar R.toARS b1 d := ReducesStar.trans hb1a1 ha1d
+      exists c, d
+    · -- Caso (i) do livro: a1 ~ b1[cite: 1]
+      have hb1a1 : sim R b1 a1 := sim_symm R h_sim
+      have hdc : sim R d c := sim_symm R hcd
+      -- Aplicamos SCOH~ em b1 ~ a1 →* d ~ c
+      rcases hSCOH b1 a1 d c hb1a1 ha1d hdc with ⟨e, f, hb1e, hef, hcf⟩
+      -- O resultado é b1 →* e ~ f *← c. Reorganizamos para a junção final.
+      exists f, e
+      constructor
+      · exact ReducesStar.trans hac hcf
+      · constructor
+        · exact sim_symm R hef
+        · exact hb1e
 -- ---------------------------------------------------------
 -- Lemas Auxiliares para o Lema 2.5.7
 -- ---------------------------------------------------------
@@ -32,13 +109,7 @@ lemma IsNormal_ReducesStar_eq {α : Type} (R : ARS_Mod α) (x y : α)
 -- Lema 2.5.7 (Parte 1): WN + COH~ ⇒ SCOH~
 -- ---------------------------------------------------------
 
-/-- Coerência Módulo ~ (COH~): ~ · →* ⊆ ↓~ -/
-def CoherentModulo {α : Type} (R : ARS_Mod α) : Prop :=
-  ∀ a b c, sim R a b → ReducesStar R.toARS b c → IsJoinableModulo R a c
 
-/-- Coerência Forte Módulo ~ (SCOH~): ~ · →* · ~ ⊆ ↓~ -/
-def StronglyCoherentModulo {α : Type} (R : ARS_Mod α) : Prop :=
-  ∀ a b c d, sim R a b → ReducesStar R.toARS b c → sim R c d → IsJoinableModulo R a d
 
 lemma WeaklyNormalizing_and_CoherentModulo_to_StronglyCoherentModulo {α : Type} (R : ARS_Mod α)
     (hWN : WeaklyNormalizing R.toARS)
