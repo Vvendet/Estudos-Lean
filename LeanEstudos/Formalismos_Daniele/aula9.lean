@@ -106,7 +106,7 @@ lemma IsNormal_ReducesStar_eq {α : Type} (R : ARS_Mod α) (x y : α)
     exact hnorm z hxz
 
 -- ---------------------------------------------------------
--- Lema 2.5.7 (Parte 1): WN + COH~ ⇒ SCOH~
+-- Lema 2.5.7
 -- ---------------------------------------------------------
 
 
@@ -136,3 +136,29 @@ lemma WeaklyNormalizing_and_CoherentModulo_to_StronglyCoherentModulo {α : Type}
   have hef : sim R e f := Relation.ReflTransGen.trans hev1 hc'f
   -- 6. Instanciamos a junção módulo final para 'a' e 'd' demonstrando que ↓~ ocorre
   exists e, f
+
+/-- Lema 2.5.7 (Parte 2): WN + CON~ + COH~ ⇒ CR~ -/
+lemma WeaklyNormalizing_ConfluenceModulo_CoherentModulo_to_ChurchRosserModulo
+ {α : Type} (R : ARS_Mod α)
+    (hWN : WeaklyNormalizing R.toARS)
+    (hCON : ConfluenceModulo R)
+    (hCOH : CoherentModulo R) : ChurchRosserModulo R := by
+  -- Conforme o livro: Por (1), o sistema é SCOH~
+  have hSCOH : StronglyCoherentModulo R :=
+  WeaklyNormalizing_and_CoherentModulo_to_StronglyCoherentModulo R hWN hCOH
+  -- Conforme o livro: Assim, ele é CR~ pela Proposição 2.5.6
+  exact CON_and_SCOH_to_CR R hCON hSCOH
+
+/-- Lema 2.5.7 (Parte 3): WN + ACR~ ⇒ CR~ -/
+lemma Lemma_2_5_7_Part3 {α : Type} (R : ARS_Mod α)
+    (hWN : WeaklyNormalizing R.toARS)
+    (hACR : AlmostChurchRosserModulo R) : ChurchRosserModulo R := by
+  -- Conforme o livro: Consequência direta de (2), pois ACR~ implica CON~ e COH~[cite: 1].
+  have hCON : ConfluenceModulo R := AlmostChurchRosserModulo_to_ConfluenceModulo R hACR
+  have hCOH : CoherentModulo R := by
+    intro a b c hab hbc
+    -- COH~ é apenas o caso do ACR~ onde a redução à esquerda é reflexiva (0 passos)
+    have haa : ReducesStar R.toARS a a :=
+    ReducesStar_iff_ReducesStar'.mpr Relation.ReflTransGen.refl
+    exact hACR a a b c haa hab hbc
+  exact WeaklyNormalizing_ConfluenceModulo_CoherentModulo_to_ChurchRosserModulo R hWN hCON hCOH
