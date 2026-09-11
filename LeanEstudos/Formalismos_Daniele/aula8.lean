@@ -96,9 +96,9 @@ lemma StronglyCompatible_to_Compatible {α : Type} (R : ARS_Mod α)
       constructor
       · exact ReducesStar_iff_ReducesStar'.mpr Relation.ReflTransGen.refl
       · exact Relation.ReflTransGen.single hab
-  | tail x y h_step ih =>
-      rcases ih with ⟨d1, had1, hd1x⟩
-      have h_sim_red := SCOM_sim_red R h d1 x y hd1x h_step
+  | tail h_prefix h_step ih =>
+      rcases ih (ReducesStar_iff_ReducesStar'.mpr h_prefix) with ⟨d1, had1, hd1x⟩
+      have h_sim_red := SCOM_sim_red R h d1 _ hd1x _ h_step
       rcases h_sim_red with ⟨d2, hd1d2, hd2y⟩
       exists d2
       constructor
