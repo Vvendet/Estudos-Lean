@@ -85,7 +85,7 @@ lemma SCOM_sim_red {α : Type} (R : ARS_Mod α) (h : StronglyCompatibleWithH R) 
       · exact Relation.ReflTransGen.trans h_prefix hvz
 
 /-- 1. SCOM H ⇒ COM H -/
-lemma StronglyCompatible_to_Compatible {α : Type} (R : ARS_Mod α)
+lemma StronglyCompatibleWithH_to_CompatibleWithH {α : Type} (R : ARS_Mod α)
     (h : StronglyCompatibleWithH R) : CompatibleWithH R := by
   intro a b c hab hbc
   have hbc' : ReducesStar' R.toARS b c :=
@@ -104,3 +104,38 @@ lemma StronglyCompatible_to_Compatible {α : Type} (R : ARS_Mod α)
       constructor
       · exact ReducesStar.trans had1 hd1d2
       · exact hd2y
+
+/-- Compatibilidade Módulo ~ (COM ~): ~ · →* ⊆ →* · ~
+    Leitura: Se a ~ b →* c, deve existir um 'd' tal que a →* d ~ c. -/
+def CompatibleModulo {α : Type} (R : ARS_Mod α) : Prop :=
+  ∀ a b c, sim R a b → ReducesStar R.toARS b c →
+    ∃ d, ReducesStar R.toARS a d ∧ sim R d c
+
+/-- Implicação de Ida: COM H ⇒ COM ~
+    Provado por indução no número de passos da equivalência (H^k)[cite: 1]. -/
+lemma CompatibleWithH_to_CompatibleModulo {α : Type} (R : ARS_Mod α)
+    (h : CompatibleWithH R) : CompatibleModulo R := by
+  intro a b c hab hbc
+  -- Essencial: 'revert c' generaliza o destino para que a Hipótese Indutiva
+  -- possa ser aplicada a outros pontos intermediários (como d1).
+  revert c
+  induction hab with
+  | refl =>
+    intro c hac
+    exists c
+    constructor
+    · exact hac
+    · exact Relation.ReflTransGen.refl
+  | tail h_prefix h_step ih =>
+      intro c hb1c
+      rcases h _ _ _ h_step hb1c with ⟨d1, ha1d1, hd1c⟩
+      rcases ih d1 ha1d1 with ⟨d2, had2, hd2d1⟩
+      exact ⟨d2, had2, Relation.ReflTransGen.trans hd2d1 hd1c⟩
+
+/-- Implicação de Volta: COM ~ ⇒ COM H -/
+lemma CompatibleModulo_to_CompatibleWithH {α : Type} (R : ARS_Mod α)
+    (h : CompatibleModulo R) : CompatibleWithH R := by
+  intro a b c hab hbc
+  -- Como H é a base geradora de ~, 1 passo de H é um passo válido em ~
+  have hab_sim : sim R a b := Relation.ReflTransGen.single hab
+  exact h a b c hab_sim hbc
