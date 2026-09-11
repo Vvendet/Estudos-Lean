@@ -184,3 +184,46 @@ def SubcommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) 
 def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
   SubcommutesModulo R (ReducesModuloRel R ra) (ReducesModuloRel R rb) ∧
   SubcommutesModulo R (ReducesModuloRel R rb) (ReducesModuloRel R ra)
+
+-- ---------------------------------------------------------
+-- Transição para Sistemas de Redução Rotulados (Labeled ARS)
+-- ---------------------------------------------------------
+
+/-- Sistema Abstrato de Redução Rotulado operando módulo uma equivalência H.
+    A ordem sobre os rótulos (I) deve ser bem-fundada para podermos
+    usar a medida lexicográfica. -/
+structure LabeledARS_Mod (α : Type) (I : Type) where
+  reduces : I → α → α → Prop
+  H : α → α → Prop
+  H_symm : Symmetric H
+  label_order : I → I → Prop
+  label_wf : WellFounded label_order
+  -- Instâncias de decidibilidade necessárias para os if-then-else da sua aula4
+  label_dec : DecidableRel label_order
+  label_eq  : DecidableEq I
+
+/-- O fecho de equivalência ~ para o sistema rotulado. -/
+def LabeledARS_Mod.sim {α I : Type} (R : LabeledARS_Mod α I) : α → α → Prop :=
+  Relation.ReflTransGen R.H
+
+-- ---------------------------------------------------------
+-- Definição 2.5.8: Conjunto Inferior (Down Set) e Medida Lexicográfica
+-- ---------------------------------------------------------
+
+variable {I : Type} (order : I → I → Prop) [DecidableRel order] [DecidableEq I]
+
+/-- 1. O Down Set (Υ_a) de um rótulo 'a'[cite: 2].
+    Conforme a sua aula4, representamos conjuntos puros como multiconjuntos
+    que retornam infinito (⊤) se o elemento pertencer, e 0 caso contrário[cite: 1, 2]. -/
+def downSet (a : I) : GMultiset I :=
+  fun x => if order x a then ⊤ else 0
+
+/-- 2. A Medida Máxima Lexicográfica (|| · ||) para strings (List I)[cite: 2].
+    Processamos a lista da esquerda para a direita (foldl).
+    Caso base: || ε || = ∅
+    Passo: || α a || = [a] ⊕ (|| α || \ Υ_a)[cite: 2]. -/
+def lexMaxMeasure (labels : List I) : GMultiset I :=
+  labels.foldl (fun acc a =>
+    -- [a] ⊕ (acc \ Υ_a)
+    GMultiset.sum (GMultiset.finite_singleton a) (GMultiset.diff acc (downSet order a))
+  ) GMultiset.empty
