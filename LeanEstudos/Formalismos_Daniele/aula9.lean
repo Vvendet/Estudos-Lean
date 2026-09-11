@@ -162,3 +162,25 @@ lemma Lemma_2_5_7_Part3 {α : Type} (R : ARS_Mod α)
     ReducesStar_iff_ReducesStar'.mpr Relation.ReflTransGen.refl
     exact hACR a a b c haa hab hbc
   exact WeaklyNormalizing_ConfluenceModulo_CoherentModulo_to_ChurchRosserModulo R hWN hCON hCOH
+
+-- ---------------------------------------------------------
+-- Definição 2.5.9: Comutação Módulo ~
+-- ---------------------------------------------------------
+
+/-- Uma relação de redução qualquer operando módulo ~ (→~ = ~ · → · ~) -/
+def ReducesModuloRel {α : Type} (R : ARS_Mod α) (r : α → α → Prop) (a b : α) : Prop :=
+  ∃ x y, sim R a x ∧ r x y ∧ sim R y b
+
+/-- Definição 2.5.9 (Parte 1): Subcomutação Módulo ~
+    →_α subcomuta com →_β módulo ~ se: a →_α b →_β c implica que
+    existem d, e tais que a →_β d ~ e *←_α c. -/
+def SubcommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
+  ∀ a b c, ra a b → rb b c →
+    ∃ d e, rb a d ∧ sim R d e ∧ Relation.ReflTransGen ra c e
+
+/-- Definição 2.5.9 (Parte 2): Comutação Módulo ~[cite: 1]
+    →_α comuta com →_β módulo ~ se →~_α subcomuta com →~_β módulo ~
+    e →~_β subcomuta com →~_α módulo ~.[cite: 1] -/
+def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
+  SubcommutesModulo R (ReducesModuloRel R ra) (ReducesModuloRel R rb) ∧
+  SubcommutesModulo R (ReducesModuloRel R rb) (ReducesModuloRel R ra)
