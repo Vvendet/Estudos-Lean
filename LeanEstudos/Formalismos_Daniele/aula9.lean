@@ -227,3 +227,47 @@ def lexMaxMeasure (labels : List I) : GMultiset I :=
     -- [a] ⊕ (acc \ Υ_a)
     GMultiset.sum (GMultiset.finite_singleton a) (GMultiset.diff acc (downSet order a))
   ) GMultiset.empty
+
+-- ---------------------------------------------------------
+-- Preparação: Relações Restritas e Coerção
+-- ---------------------------------------------------------
+
+/-- Redução restrita a um subconjunto de rótulos (→_v ou →_h)[cite: 1] -/
+def reduces_set {α I : Type} (R : LabeledARS_Mod α I) (S : Set I) (x y : α) : Prop :=
+  ∃ i ∈ S, R.reduces i x y
+
+/-- Projeta um sistema rotulado de volta para um ARS_Mod global,
+    unindo as reduções de todos os rótulos possíveis. -/
+def LabeledARS_Mod.toARS_Mod {α I : Type} (R : LabeledARS_Mod α I) : ARS_Mod α where
+  red := { p | ∃ i, R.reduces i p.1 p.2 }
+  H := R.H
+  H_symm := R.H_symm
+
+/-- Redução ao longo de uma cadeia (lista) de rótulos (→_σ ou →_τ). -/
+def reduces_seq {α I : Type} (R : LabeledARS_Mod α I) : List I → α → α → Prop
+  | [], a, b => a = b
+  | (i :: is), a, b => ∃ c, R.reduces i a c ∧ reduces_seq R is c b
+
+/-- Predicado que encapsula a validade dos diagramas da Figura 2.11
+    sob a restrição de medida lexicográfica ||β|| ⪰_mul ||τ||. -/
+def LocalDecreasingDiagramsHold {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih : Set I)
+    [DecidableRel R.label_order] [DecidableEq I] : Prop :=
+  -- Para todo a <-_α b ->_β c, com α ∈ Iv e β ∈ Ih[cite: 2]
+  ∀ a b c (α_lbl β_lbl : I),
+    α_lbl ∈ Iv → β_lbl ∈ Ih →
+    R.reduces α_lbl b a → R.reduces β_lbl b c →
+    -- Devem existir cadeias σ, τ, σ', τ' pertencentes aos respectivos conjuntos[cite: 2]
+    ∃ (σ τ σ' τ' : List I) (d1  e1  d e : α),
+      (∀ x ∈ σ, x ∈ Iv) ∧ (∀ x ∈ τ, x ∈ Ih) ∧
+      (∀ x ∈ σ', x ∈ Iv) ∧ (∀ x ∈ τ', x ∈ Ih) ∧
+      -- E a convergência estrutural do diagrama (i) da Figura 2.11[cite: 2]
+      -- Caminho esquerdo: a →_σ d1 →_τ' d
+      reduces_seq R σ a d1 ∧ reduces_seq R τ' d1 d ∧
+      -- Caminho direito: c →_τ e1 →_σ' e
+      reduces_seq R τ c e1 ∧ reduces_seq R σ' e1 e ∧
+      -- Fechamento módulo ~ nas pontas do diagrama[cite: 2]
+      R.sim d e ∧
+      -- Restrição de medida: ||β|| ⪰_mul ||τ|| (usando MultisetExtension da aula 4)[cite: 2, 4]
+      (MultisetExtension R.label_order (lexMaxMeasure R.label_order [β_lbl])
+      (lexMaxMeasure R.label_order τ) ∨
+       lexMaxMeasure R.label_order [β_lbl] = lexMaxMeasure R.label_order τ)
