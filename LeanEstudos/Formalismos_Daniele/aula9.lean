@@ -272,6 +272,29 @@ def LocalDecreasingDiagramsHold {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih :
       (lexMaxMeasure R.label_order τ) ∨
        lexMaxMeasure R.label_order [β_lbl] = lexMaxMeasure R.label_order τ)
 
+open scoped Classical in
+/-- A ordem lexicográfica >_lex descrita na prova do Teorema 2.5.10.
+    Compara (||τ||, |σ|) com (||τ'||, |σ'|):
+    Primeiro usa a extensão de multiconjunto sobre os rótulos horizontais.
+    Se forem iguais, usa a ordem natural (<) sobre o comprimento das cadeias verticais. -/
+def lex_order {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order] :
+    (GMultiset I × Nat) → (GMultiset I × Nat) → Prop :=
+  Lexicographic_Order (MultisetExtension R.label_order) (fun a b => a < b)
+
+open scoped Classical in
+/-- Lema auxiliar: >_lex é bem-fundada. -/
+lemma lex_order_wf {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order] :
+    WellFounded (lex_order R) := by
+  -- A aula4 formalizou a direção (<=) do Teorema 2.3.12[cite: 1].
+  -- Assumimos a direção (=>) aqui temporariamente para avançarmos com a teoria.
+  have hwf_mul : WellFounded (MultisetExtension R.label_order) := sorry
+
+  -- A ordem natural (<) nos naturais não possui cadeias decrescentes infinitas.
+  have hwf_nat : WellFounded (fun (a b : Nat) => a < b) := Nat.lt_wfRel.wf
+
+  -- O produto lexicográfico preserva a boa-fundação (aula3_anexo)[cite: 3].
+  exact Lexicographic_Order_WellFounded hwf_mul hwf_nat
+
 /-- Teorema 2.5.10 (Parte 1): Se os diagramas locais decrescentes valem,
     então a união vertical (→_v) comuta com a união horizontal (→_h) módulo ~. -/
 theorem Theorem_2_5_10_Part1 {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih : Set I)
