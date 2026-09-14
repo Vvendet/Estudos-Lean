@@ -271,3 +271,26 @@ def LocalDecreasingDiagramsHold {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih :
       (MultisetExtension R.label_order (lexMaxMeasure R.label_order [β_lbl])
       (lexMaxMeasure R.label_order τ) ∨
        lexMaxMeasure R.label_order [β_lbl] = lexMaxMeasure R.label_order τ)
+
+/-- Teorema 2.5.10 (Parte 1): Se os diagramas locais decrescentes valem,
+    então a união vertical (→_v) comuta com a união horizontal (→_h) módulo ~. -/
+theorem Theorem_2_5_10_Part1 {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih : Set I)
+    [DecidableRel R.label_order] [DecidableEq I]
+    (h_diagrams : LocalDecreasingDiagramsHold R Iv Ih) :
+    CommutesModulo R.toARS_Mod (reduces_set R Iv) (reduces_set R Ih) := by
+  -- A prova exige indução sobre a ordem lexicográfica >_lex, combinando a extensão
+  -- de multiconjunto >_mul e o comprimento das cadeias[cite: 1].
+  sorry
+
+/-- Teorema 2.5.10 (Parte 2): Se as reduções verticais, horizontais e globais
+    coincidem (→_A = →_v = →_h), o sistema inteiro é CR~[cite: 1]. -/
+theorem Theorem_2_5_10_Part2 {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih : Set I)
+    [DecidableRel R.label_order] [DecidableEq I]
+    (h_diagrams : LocalDecreasingDiagramsHold R Iv Ih)
+    -- Hipóteses de igualdade relacional: →_A = →_v e →_A = →_h[cite: 1]
+    (h_eq_v : ∀ x y, (x, y) ∈ R.toARS_Mod.red ↔ reduces_set R Iv x y)
+    (h_eq_h : ∀ x y, (x, y) ∈ R.toARS_Mod.red ↔ reduces_set R Ih x y) :
+    ChurchRosserModulo R.toARS_Mod := by
+  -- Como demonstrado no livro, a Parte 1 garante que →_A é SCOH~[cite: 1].
+  -- Consequentemente, →_A é CON~ e, pela Proposição 2.5.6, o sistema é CR~[cite: 1].
+  sorry
