@@ -162,14 +162,12 @@ lemma Lemma_2_5_7_Part3 {α : Type} (R : ARS_Mod α)
 def ReducesModuloRel {α : Type} (R : ARS_Mod α) (r : α → α → Prop) (a b : α) : Prop :=
   ∃ x y, sim R a x ∧ r x y ∧ sim R y b
 
-/-- Subcomutação Módulo ~  -/
+/-- Subcomutação Módulo ~ -/
 def SubcommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
   ∀ a b c, ra a b → rb a c →
     ∃ d e, rb b d ∧ sim R d e ∧ Relation.ReflTransGen ra c e
 
-  /-- Definição 2.5.9 (Parte 2): Comutação Módulo ~[cite: 1]
-      →_α comuta com →_β módulo ~ se →~_α subcomuta com →~_β módulo ~
-      e →~_β subcomuta com →~_α módulo ~.[cite: 1] -/
+  /-- Comutação Módulo ~ -/
   def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
     SubcommutesModulo R (ReducesModuloRel R ra) (ReducesModuloRel R rb) ∧
     SubcommutesModulo R (ReducesModuloRel R rb) (ReducesModuloRel R ra)
@@ -493,6 +491,31 @@ def Diagram_2_11_iii {α : Type} (R : ARS_Mod α) (rb : α → α → Prop) : Pr
   ∀ a b c, sim R a b → rb a c →
     ∃ d, Relation.ReflTransGen rb b d ∧ sim R d c
 
+/-- Lema auxiliar: Estende o Diagrama (i) para uma cadeia reflexiva-transitiva de ra -/
+lemma lifting_diagram_i {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop)
+    (h_diag_i : Diagram_2_11_i R ra rb) :
+    ∀ a b c, Relation.ReflTransGen ra a b → rb a c →
+      ∃ d e, Relation.ReflTransGen rb b d ∧ sim R d e ∧ Relation.ReflTransGen ra c e := by
+  intro a b c h_rab
+  -- Indução sobre a cadeia ReflTransGen de ra
+  induction h_rab generalizing c with
+  | refl =>
+    -- Caso base: zero passos de ra (a = b)
+    -- Reduz-se ao caso em que b = a, o que trivialmente fecha com o Diagrama (iii) ou reflexividade
+    intro h_rb_ac
+    use c, c
+    constructor
+    · exact Relation.ReflTransGen.refl
+    · constructor
+      · exact Relation.ReflTransGen.refl -- assumindo reflexividade de sim ou usando equivalência
+      · exact Relation.ReflTransGen.refl
+  | tail a x y h_rax h_rxy ih =>
+    -- Passo indutivo: a cadeia vai de a até x, e dá mais um passo até y (x →_ra y)
+    intro h_rb_ac
+    -- Aplicamos a hipótese indutiva para o trecho até x
+    -- ... e usamos o Diagrama (i) para o passo extra de ra (x →_ra y)
+    sorry
+
 /--
   Teorema 2.5.10 (Parte 1):
   Se as relações locais ra e rb satisfazem os três diagramas localmente
@@ -510,25 +533,39 @@ theorem Theorem_2_5_10_Part1 {α : Type}
   constructor
 
   · -- Submeta 1: ra subcomuta com rb módulo ~
-    -- Meta: ∀ a b c, RedModulo(ra) a b → RedModulo(rb) a c → Convergem
     unfold SubcommutesModulo
-    intro a b c h_ra_ab h_rb_bc
+    intro a b c h_ra_ab h_rb_ac
 
-    -- h_rb_bc é do tipo 'ReducesModuloRel R rb b c', que internamente
-    -- é uma cadeia de passos. Vamos aplicar indução sobre essa cadeia!
-    induction h_rb_bc with
-    | refl =>
-      -- CASO BASE: Zero passos horizontais (b = c).
-      -- Como rb não fez nada, o passo vertical ra de 'a' para 'b'
-      -- já satisfaz o fechamento trivilamente.
+    -- Revelamos a anatomia do passo isolado envelopado por equivalências
+    unfold ReducesModuloRel at h_ra_ab h_rb_ac
+
+    -- Extraímos os pontos intermediários do passo vertical (ra): a ~ a1 →_v b1 ~ b
+    rcases h_ra_ab with ⟨a1, b1, h_sim_a_a1, h_ra_a1_b1, h_sim_b1_b⟩
+
+    -- Extraímos os pontos intermediários do passo horizontal (rb): a ~ a2 →_h c1 ~ c
+    rcases h_rb_ac with ⟨a2, c1, h_sim_a_a2, h_rb_a2_c1, h_sim_c1_c⟩
+
+    -- Agora temos a topologia completa exposta para conectarmos os diagramas!
+    -- 1. Conectamos o platô superior: a1 ~ a e a ~ a2 implica a1 ~ a2
+    have h_sim_a1_a : sim R a1 a := by
+      -- Como ~ é gerada por H (que é simétrica), a relação inteira é simétrica
       sorry
 
-    | tail d e h_rb_bd h_rb_de ih =>
-      -- PASSO INDUTIVO: rb fez uma cadeia até 'd' e mais um passo até 'e'.
-      -- Nossa hipótese indutiva 'ih' diz que o diagrama já fecha para 'd'.
-      -- Precisamos "colar" os diagramas locais h_diag_i, h_diag_ii e h_diag_iii
-      -- para empurrar o fechamento até o elemento 'e'.
+    have h_sim_a1_a2 : sim R a1 a2 := by
+      -- A transitividade do fecho reflexivo-transitivo (ReflTransGen.trans)
       sorry
+
+    -- 2. Primeira Colagem: Aplicamos o Diagrama (ii)
+    -- Temos: a1 →_ra b1 e a1 ~ a2
+    -- O Diagrama (ii) nos garante um ponto 'w1' tal que b1 ~ w1 e a2 →_ra* w1
+    have h_aplic_diag_ii := h_diag_ii a1 b1 a2 h_ra_a1_b1 h_sim_a1_a2
+    rcases h_aplic_diag_ii with ⟨w1, h_sim_b1_w1, h_ra_a2_w1⟩
+
+    -- O nosso estado topológico atualizado a partir de 'a2' agora é:
+    -- a2 →_rb c1 (h_rb_a2_c1)   [1 passo horizontal]
+    -- a2 →_ra* w1 (h_ra_a2_w1)  [N passos verticais]
+
+    sorry
 
   · -- Submeta 2: rb subcomuta com ra módulo ~
     -- Meta: ∀ a b c, RedModulo(rb) a b → RedModulo(ra) a c → Convergem
