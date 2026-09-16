@@ -99,11 +99,9 @@ lemma CON_and_SCOH_to_CR {α : Type} (R : ARS_Mod α)
 lemma IsNormal_ReducesStar_eq {α : Type} (R : ARS_Mod α) (x y : α)
     (hnorm : IsNormal R.toARS x) (hxy : ReducesStar R.toARS x y) : x = y := by
   have hxy_rtg := ReducesStar_iff_ReducesStar'.mp hxy
-  -- Analisamos a cabeça da redução: ou é 0 passos, ou dá pelo menos 1 passo
   have cases_head := Relation.ReflTransGen.cases_head hxy_rtg
   rcases cases_head with (rfl | ⟨z, hxz, hzy⟩)
   · rfl
-  · -- Se deu um passo (x → z), entra em contradição com o fato de 'x' ser forma normal
     exfalso
     exact hnorm z hxz
 
@@ -117,26 +115,17 @@ lemma WeaklyNormalizing_and_CoherentModulo_to_StronglyCoherentModulo {α : Type}
     (hWN : WeaklyNormalizing R.toARS)
     (hCOH : CoherentModulo R) : StronglyCoherentModulo R := by
   intro a b c d hab hbc hcd
-  -- 1. Pela normalização fraca, 'c' reduz para uma forma normal 'c'
   rcases hWN c with ⟨c', hcc', hnorm_c'⟩
-  -- 2. Conectamos b →* c com c →* c' para obter b →* c'
   have hbc' : ReducesStar R.toARS b c' := ReducesStar.trans hbc hcc'
-  -- 3. Aplicamos COH~ para a cadeia (a ~ b →* c')
   rcases hCOH a b c' hab hbc' with ⟨e, v1, hae, hev1, hc'v1⟩
-  -- Como c' é forma normal, c' →* v1 implica c' = v1
   have heq1 : c' = v1 := IsNormal_ReducesStar_eq R c' v1 hnorm_c' hc'v1
   rw [← heq1] at hev1
-  -- 4. Invertemos c ~ d para d ~ c e aplicamos COH~ para a cadeia (d ~ c →* c')
   have hdc : sim R d c := sim_symm R hcd
   rcases hCOH d c c' hdc hcc' with ⟨f, v2, hdf, hfv2, hc'v2⟩
-  -- Novamente, c' é forma normal, logo c' = v2
   have heq2 : c' = v2 := IsNormal_ReducesStar_eq R c' v2 hnorm_c' hc'v2
   rw [← heq2] at hfv2
-  -- 5. Agora temos a →* e ~ c' e também d →* f ~ c'.
-  -- Pela simetria e transitividade de ~, concluímos que e ~ f
   have hc'f : sim R c' f := sim_symm R hfv2
   have hef : sim R e f := Relation.ReflTransGen.trans hev1 hc'f
-  -- 6. Instanciamos a junção módulo final para 'a' e 'd' demonstrando que ↓~ ocorre
   exists e, f
 
 /-- Lema 2.5.7 (Parte 2): WN + CON~ + COH~ ⇒ CR~ -/
@@ -173,19 +162,17 @@ lemma Lemma_2_5_7_Part3 {α : Type} (R : ARS_Mod α)
 def ReducesModuloRel {α : Type} (R : ARS_Mod α) (r : α → α → Prop) (a b : α) : Prop :=
   ∃ x y, sim R a x ∧ r x y ∧ sim R y b
 
-/-- Definição 2.5.9 (Parte 1): Subcomutação Módulo ~
-    →_α subcomuta com →_β módulo ~ se: a →_α b →_β c implica que
-    existem d, e tais que a →_β d ~ e *←_α c. -/
+/-- Subcomutação Módulo ~  -/
 def SubcommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
-  ∀ a b c, ra a b → rb b c →
-    ∃ d e, rb a d ∧ sim R d e ∧ Relation.ReflTransGen ra c e
+  ∀ a b c, ra a b → rb a c →
+    ∃ d e, rb b d ∧ sim R d e ∧ Relation.ReflTransGen ra c e
 
-/-- Definição 2.5.9 (Parte 2): Comutação Módulo ~[cite: 1]
-    →_α comuta com →_β módulo ~ se →~_α subcomuta com →~_β módulo ~
-    e →~_β subcomuta com →~_α módulo ~.[cite: 1] -/
-def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
-  SubcommutesModulo R (ReducesModuloRel R ra) (ReducesModuloRel R rb) ∧
-  SubcommutesModulo R (ReducesModuloRel R rb) (ReducesModuloRel R ra)
+  /-- Definição 2.5.9 (Parte 2): Comutação Módulo ~[cite: 1]
+      →_α comuta com →_β módulo ~ se →~_α subcomuta com →~_β módulo ~
+      e →~_β subcomuta com →~_α módulo ~.[cite: 1] -/
+  def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
+    SubcommutesModulo R (ReducesModuloRel R ra) (ReducesModuloRel R rb) ∧
+    SubcommutesModulo R (ReducesModuloRel R rb) (ReducesModuloRel R ra)
 
 -- ---------------------------------------------------------
 -- Transição para Sistemas de Redução Rotulados (Labeled ARS)
@@ -427,6 +414,45 @@ lemma SingleStepMultisetExtension_to_CutExpand {α : Type} [DecidableEq α] (R :
             change n2 + nX = n1 + nY
             omega
 
+-- Lema Auxiliar 1: Se um multiconjunto não é vazio, sua cardinalidade na Mathlib é > 0
+lemma Multiset_card_pos_of_not_empty {α : Type} [DecidableEq α] (X : FiniteMultiset α)
+    (h_nempty : X.val ≠ ∅) : Multiset.card (FiniteMultiset_to_Mathlib X) > 0 := by
+  sorry
+
+-- Lema Auxiliar 2: Se a cardinalidade de X é 1, a extensão geral colapsa para a extensão de passo único
+lemma SingleStep_of_Card_One {α : Type} [DecidableEq α] (R : α → α → Prop)
+    (M1 M2 X Y : FiniteMultiset α)
+    (h_card : Multiset.card (FiniteMultiset_to_Mathlib X) = 1)
+    (h_ext : FiniteMultisetExtension R M1 M2) :
+    SingleStepMultisetExtension R M1 M2 := by
+  sorry
+
+
+lemma FiniteMultisetExtension_implies_TransGen {α : Type} [DecidableEq α] (R : α → α → Prop)
+    (M1 M2 : FiniteMultiset α)
+    (h_ext : FiniteMultisetExtension R M1 M2) :
+    Relation.TransGen (Relation.CutExpand R) (FiniteMultiset_to_Mathlib M2) (FiniteMultiset_to_Mathlib M1) := by
+
+  -- 1. Desdobramos a extensão original para extrair o multiconjunto X removido
+  unfold FiniteMultisetExtension at h_ext
+  unfold MultisetExtension at h_ext
+  rcases h_ext with ⟨X_val, Y_val, hX_fin, hY_fin, hX_nempty, hX_sub_M1, hM2_eq, h_red⟩
+
+  -- 2. A estratégia matemática exigirá indução sobre o tamanho (cardinalidade) de X_val.
+  --    Como hX_nempty garante que X_val ≠ ∅, sabemos que o tamanho de X_val é ≥ 1.
+
+  -- BASE DA INDUÇÃO (|X| = 1):
+  -- Se X_val for um singleton ({a}), a sua extensão de múltiplos passos colapsa
+  -- exatamente na 'SingleStepMultisetExtension'.
+  -- Invocamos o lema que acabamos de provar e aplicamos 'Relation.TransGen.single'.
+
+  -- PASSO INDUTIVO (|X| = n + 1):
+  -- Se X_val = {a} + X_resto, nós particionamos a operação em dois passos:
+  -- Passo A: Removemos 'a' e inserimos os elementos de Y_val relacionados a ele.
+  -- Passo B: Invocamos a hipótese indutiva para o X_resto.
+  -- Juntamos os passos usando 'Relation.TransGen.head' ou 'Relation.TransGen.tail'.
+
+  sorry
 
 open scoped Classical in
 /-- Lema auxiliar: >_lex é bem-fundada. -/
@@ -442,15 +468,71 @@ lemma lex_order_wf {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label
   -- O produto lexicográfico preserva a boa-fundação (aula3_anexo)[cite: 3].
   exact Lexicographic_Order_WellFounded hwf_mul hwf_nat
 
-/-- Teorema 2.5.10 (Parte 1): Se os diagramas locais decrescentes valem,
-    então a união vertical (→_v) comuta com a união horizontal (→_h) módulo ~. -/
-theorem Theorem_2_5_10_Part1 {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih : Set I)
-    [DecidableRel R.label_order] [DecidableEq I]
-    (h_diagrams : LocalDecreasingDiagramsHold R Iv Ih) :
-    CommutesModulo R.toARS_Mod (reduces_set R Iv) (reduces_set R Ih) := by
-  -- A prova exige indução sobre a ordem lexicográfica >_lex, combinando a extensão
-  -- de multiconjunto >_mul e o comprimento das cadeias[cite: 1].
-  sorry
+
+/-- Diagrama (i) da Figura 2.11:
+    Interação entre ra (vertical) e rb (horizontal).
+    Se 'a' diverge por ra para 'b' e por rb para 'c',
+    eles convergem com rb* a partir de 'b', ra* a partir de 'c', módulo ~. -/
+def Diagram_2_11_i {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
+  ∀ a b c, ra a b → rb a c →
+    ∃ d e, Relation.ReflTransGen rb b d ∧ sim R d e ∧ Relation.ReflTransGen ra c e
+
+/-- Diagrama (ii) da Figura 2.11:
+    Interação entre ra (vertical) e a equivalência ~.
+    Se 'a' diverge por ra para 'b' e por ~ para 'c',
+    'b' e 'c' convergem com ~ a partir de 'b', e ra* a partir de 'c'. -/
+def Diagram_2_11_ii {α : Type} (R : ARS_Mod α) (ra : α → α → Prop) : Prop :=
+  ∀ a b c, ra a b → sim R a c →
+    ∃ d, sim R b d ∧ Relation.ReflTransGen ra c d
+
+/-- Diagrama (iii) da Figura 2.11:
+    Interação entre a equivalência ~ e rb (horizontal).
+    Se 'a' diverge por ~ para 'b' e por rb para 'c',
+    'b' e 'c' convergem com rb* a partir de 'b', e ~ a partir de 'd'. -/
+def Diagram_2_11_iii {α : Type} (R : ARS_Mod α) (rb : α → α → Prop) : Prop :=
+  ∀ a b c, sim R a b → rb a c →
+    ∃ d, Relation.ReflTransGen rb b d ∧ sim R d c
+
+/--
+  Teorema 2.5.10 (Parte 1):
+  Se as relações locais ra e rb satisfazem os três diagramas localmente
+  decrescentes da Figura 2.11, então ra e rb comutam módulo a equivalência de R.
+-/
+theorem Theorem_2_5_10_Part1 {α : Type}
+    (R : ARS_Mod α)
+    (ra rb : α → α → Prop)
+    (h_diag_i : Diagram_2_11_i R ra rb)
+    (h_diag_ii : Diagram_2_11_ii R ra)
+    (h_diag_iii : Diagram_2_11_iii R rb) :
+    CommutesModulo R ra rb := by
+
+  unfold CommutesModulo
+  constructor
+
+  · -- Submeta 1: ra subcomuta com rb módulo ~
+    -- Meta: ∀ a b c, RedModulo(ra) a b → RedModulo(rb) a c → Convergem
+    unfold SubcommutesModulo
+    intro a b c h_ra_ab h_rb_bc
+
+    -- h_rb_bc é do tipo 'ReducesModuloRel R rb b c', que internamente
+    -- é uma cadeia de passos. Vamos aplicar indução sobre essa cadeia!
+    induction h_rb_bc with
+    | refl =>
+      -- CASO BASE: Zero passos horizontais (b = c).
+      -- Como rb não fez nada, o passo vertical ra de 'a' para 'b'
+      -- já satisfaz o fechamento trivilamente.
+      sorry
+
+    | tail d e h_rb_bd h_rb_de ih =>
+      -- PASSO INDUTIVO: rb fez uma cadeia até 'd' e mais um passo até 'e'.
+      -- Nossa hipótese indutiva 'ih' diz que o diagrama já fecha para 'd'.
+      -- Precisamos "colar" os diagramas locais h_diag_i, h_diag_ii e h_diag_iii
+      -- para empurrar o fechamento até o elemento 'e'.
+      sorry
+
+  · -- Submeta 2: rb subcomuta com ra módulo ~
+    -- Meta: ∀ a b c, RedModulo(rb) a b → RedModulo(ra) a c → Convergem
+    sorry
 
 /-- Teorema 2.5.10 (Parte 2): Se as reduções verticais, horizontais e globais
     coincidem (→_A = →_v = →_h), o sistema inteiro é CR~[cite: 1]. -/
