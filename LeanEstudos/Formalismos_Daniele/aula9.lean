@@ -341,44 +341,96 @@ lemma MultisetExtension_to_CutExpand {α : Type} [DecidableEq α] (R : α → α
   unfold FiniteMultisetExtension at h_ext
   unfold MultisetExtension at h_ext
   rcases h_ext with ⟨X_val, Y_val, hX_fin, hY_fin, hX_nempty, hX_sub_M1, hM2_eq, h_red⟩
-
-  -- 2. Empacotamos os valores crus de volta em FiniteMultisets para usar a ponte
   let X : FiniteMultiset α := ⟨X_val, hX_fin⟩
   let Y : FiniteMultiset α := ⟨Y_val, hY_fin⟩
-
-  -- 3. Convertemos X e Y para o domínio da Mathlib
   let X_mathlib := FiniteMultiset_to_Mathlib X
   let Y_mathlib := FiniteMultiset_to_Mathlib Y
-
-  -- 4. A Mathlib requer que M2_mathlib seja equivalente a (M1_mathlib - X_mathlib) + Y_mathlib.
-  -- Nós sabemos que isso é verdade por causa de 'hM2_eq' (M2 = (M1 \ X) ⊕ Y).
   have h_algebraic_equiv : FiniteMultiset_to_Mathlib M2 =
         (FiniteMultiset_to_Mathlib M1 - X_mathlib) + Y_mathlib := by
-      -- 1. Usamos a extensionalidade: multisets são iguais se suas contagens forem iguais
-      apply Multiset.ext
+      apply Multiset.ext.mpr
       intro a
 
-      -- 2. Expandimos a aritmética da Mathlib para a contagem individual
       rw [Multiset.count_add, Multiset.count_sub]
-
-      -- 3. Injetamos o nosso lema auxiliar para trocar a Mathlib pelo seu GMultiset
       rw [count_toMathlib M2, count_toMathlib M1, count_toMathlib X, count_toMathlib Y]
 
-      -- 4. Invocamos a sua hipótese de igualdade estrutural: hM2_eq
-      -- hM2_eq : M2 = GMultiset.sum (GMultiset.diff M1 X) Y
       have h_eval := congrFun hM2_eq a
       unfold GMultiset.sum GMultiset.diff at h_eval
 
-      -- 5. Agora o problema foi reduzido a uma igualdade pura de números naturais
-      -- A sua álgebra (ENat.toNat) precisa ser alinhada com os operadores normais de Nat.
-      sorry
+      have fin_M1 := M1.property.1 a
+      have fin_M2 := M2.property.1 a
+      have fin_X := X.property.1 a
+      have fin_Y := Y.property.1 a
+
+      cases eq1 : M1.val a with
+      | top => exact False.elim (fin_M1 eq1)
+      | coe n1 =>
+        cases eq2 : M2.val a with
+        | top => exact False.elim (fin_M2 eq2)
+        | coe n2 =>
+          cases eqX : X.val a with
+          | top => exact False.elim (fin_X eqX)
+          | coe nX =>
+            cases eqY : Y.val a with
+            | top => exact False.elim (fin_Y eqY)
+            | coe nY =>
+              -- 1. Reescrevemos a hipótese ignorando as coerções (↑) e os nomes antigos.
+              -- Como M1 tem coerção automática para M1.val, e X_val originou X.val,
+              -- o Lean aceita essa mudança definicional de bom grado!
+              change M2.val a = M1.val a - X.val a + Y.val a at h_eval
+
+              -- 2. Agora o 'rw' consegue aplicar todas as equações do 'cases' perfeitamente
+              rw [eq1, eq2, eqX, eqY] at h_eval
+
+              -- 3. Passamos a igualdade do domínio ENat para os Naturais padrão
+              have h_final := congrArg ENat.toNat h_eval
+
+              -- 4. O simplificador faz a matemática básica e fecha a álgebra
+              revert h_final
+              simp
+              intro h_final
+              exact h_final
 
   -- 5. A Mathlib requer que para todo y ∈ Y_mathlib, exista um x ∈ X_mathlib tal que R x y.
-  -- Nós temos exatamente essa lógica em 'h_red'.
+  -- 5. A Mathlib requer que para todo y ∈ Y_mathlib, exista um x ∈ X_mathlib tal que R x y.
+-- 5. A Mathlib requer que para todo y ∈ Y_mathlib, exista um x ∈ X_mathlib tal que R x y.
   have h_reduction_equiv : ∀ y ∈ Y_mathlib, ∃ x ∈ X_mathlib, R x y := by
-    -- Implementação futura: Requer provar que a pertinência (y ∈ Y_mathlib)
-    -- é logicamente equivalente a (Y.val y > 0)
-    sorry
+    intro y hy
+    -- Na Mathlib, 'y' pertence a um Multiset se a sua contagem for > 0
+    have hy_count : Multiset.count y Y_mathlib > 0 := Multiset.count_pos.mpr hy
+    rw [count_toMathlib Y] at hy_count
+
+    -- Traduzimos o 'toNat > 0' de volta para a sua pertinência original (Y_val y > 0)
+    have hy_mem : y ∈ Y_val := by
+      change Y_val y > 0
+      have fin_Y := Y.property.1 y
+      change Y_val y ≠ ⊤ at fin_Y
+      cases eqY : Y_val y with
+      | top => exact False.elim (fin_Y eqY)
+      | coe nY =>
+        -- Alinhamos a sintaxe definicional para o rw reconhecer Y_val
+        change (Y_val y).toNat > 0 at hy_count ⊢
+        rw [eqY] at hy_count ⊢
+        exact hy_count
+
+    -- Invocamos a sua hipótese estrutural 'h_red' (∀ y ∈ Y_val, ∃ x ∈ X_val, ...)
+    rcases h_red y hy_mem with ⟨x, hx_mem, hRxy⟩
+    exists x
+
+    -- Provamos a pertinência na Mathlib e fechamos o passo relacional
+    constructor
+    · apply Multiset.count_pos.mp
+      rw [count_toMathlib X]
+      have fin_X := X.property.1 x
+      change X_val x ≠ ⊤ at fin_X
+      cases eqX : X_val x with
+      | top => exact False.elim (fin_X eqX)
+      | coe nX =>
+        -- Alinhamos a sintaxe definicional para o rw reconhecer X_val
+        change X_val x > 0 at hx_mem
+        change (X_val x).toNat > 0
+        rw [eqX] at hx_mem ⊢
+        exact hx_mem
+    · exact hRxy
 
   -- 6. Finalmente, aplicamos o construtor de CutExpand da Mathlib com as peças validadas
   -- (O construtor exato aplicaria h_algebraic_equiv e h_reduction_equiv)
