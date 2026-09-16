@@ -1,4 +1,6 @@
 import LeanEstudos.Formalismos_Daniele.aula8
+import Mathlib.Data.Multiset.Basic
+import Mathlib.Order.WellFounded
 
 -- ---------------------------------------------------------
 -- Proposição 2.5.6 (Ciclo Completo)
@@ -280,6 +282,107 @@ open scoped Classical in
 def lex_order {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order] :
     (GMultiset I × Nat) → (GMultiset I × Nat) → Prop :=
   Lexicographic_Order (MultisetExtension R.label_order) (fun a b => a < b)
+
+
+open scoped Classical in
+noncomputable def FiniteMultiset_to_Mathlib {α : Type}
+    (M : FiniteMultiset α) : Multiset α :=
+  let supp : Finset α := M.property.2.toFinset
+  supp.sum (fun a => Multiset.replicate (M.val a).toNat a)
+
+
+open scoped Classical in
+/-- Lema que garante que a conversão preserva a multiplicidade de cada elemento -/
+lemma count_toMathlib {α : Type} [DecidableEq α] (M : FiniteMultiset α) (a : α) :
+    Multiset.count a (FiniteMultiset_to_Mathlib M) = (M.val a).toNat := by
+  unfold FiniteMultiset_to_Mathlib
+  have h_hom : Multiset.count a = ⇑(Multiset.countAddMonoidHom a) := rfl
+  rw [h_hom, map_sum, ← h_hom]
+  simp only [Multiset.count_replicate]
+  by_cases h : a ∈ M.property.2.toFinset
+  · rw [Finset.sum_eq_single a]
+    · simp
+    · intro b _ hb_neq
+      -- Transição direta via análise de casos do 'if'
+      split_ifs with heq
+      · exact False.elim (hb_neq heq)
+      · rfl
+    · intro h_not_in
+      contradiction
+  have h_zero_left : (M.property.2.toFinset.sum fun x =>
+   if x = a then (M.val x).toNat else 0) = 0 := by
+        apply Finset.sum_eq_zero
+        intro x hx
+        split_ifs with heq
+        · -- Se x = a, substituímos x por a em hx, o que contradiz a hipótese h principal
+          subst heq
+          contradiction
+        · rfl
+  rw [h_zero_left]
+  symm
+  have h_not_pos : ¬ (M.val a > 0) := by
+    intro h_pos
+    apply h
+    -- Volta do domínio de Finset iterável para a definição abstrata do seu Set.Finite
+    simp only [Set.Finite.mem_toFinset, Set.mem_setOf_eq]
+    exact h_pos
+  have h_zero : M.val a = 0 := le_antisymm (not_lt.mp h_not_pos) (zero_le _)
+  rw [h_zero]
+  rfl
+
+/-- 2. O Mapeamento da Relação (Subrelation):
+    Prova que se M1 >_mul M2 na definição (FiniteMultisetExtension),
+    então M1 se expande para M2 na definição da Mathlib (CutExpand). -/
+lemma MultisetExtension_to_CutExpand {α : Type} [DecidableEq α] (R : α → α → Prop)
+    (M1 M2 : FiniteMultiset α)
+    (h_ext : FiniteMultisetExtension R M1 M2) :
+    Relation.CutExpand R (FiniteMultiset_to_Mathlib M2) (FiniteMultiset_to_Mathlib M1) := by
+  -- 1. Desdobramos a sua extensão para revelar os conjuntos originais X e Y
+  unfold FiniteMultisetExtension at h_ext
+  unfold MultisetExtension at h_ext
+  rcases h_ext with ⟨X_val, Y_val, hX_fin, hY_fin, hX_nempty, hX_sub_M1, hM2_eq, h_red⟩
+
+  -- 2. Empacotamos os valores crus de volta em FiniteMultisets para usar a ponte
+  let X : FiniteMultiset α := ⟨X_val, hX_fin⟩
+  let Y : FiniteMultiset α := ⟨Y_val, hY_fin⟩
+
+  -- 3. Convertemos X e Y para o domínio da Mathlib
+  let X_mathlib := FiniteMultiset_to_Mathlib X
+  let Y_mathlib := FiniteMultiset_to_Mathlib Y
+
+  -- 4. A Mathlib requer que M2_mathlib seja equivalente a (M1_mathlib - X_mathlib) + Y_mathlib.
+  -- Nós sabemos que isso é verdade por causa de 'hM2_eq' (M2 = (M1 \ X) ⊕ Y).
+  have h_algebraic_equiv : FiniteMultiset_to_Mathlib M2 =
+        (FiniteMultiset_to_Mathlib M1 - X_mathlib) + Y_mathlib := by
+      -- 1. Usamos a extensionalidade: multisets são iguais se suas contagens forem iguais
+      apply Multiset.ext
+      intro a
+
+      -- 2. Expandimos a aritmética da Mathlib para a contagem individual
+      rw [Multiset.count_add, Multiset.count_sub]
+
+      -- 3. Injetamos o nosso lema auxiliar para trocar a Mathlib pelo seu GMultiset
+      rw [count_toMathlib M2, count_toMathlib M1, count_toMathlib X, count_toMathlib Y]
+
+      -- 4. Invocamos a sua hipótese de igualdade estrutural: hM2_eq
+      -- hM2_eq : M2 = GMultiset.sum (GMultiset.diff M1 X) Y
+      have h_eval := congrFun hM2_eq a
+      unfold GMultiset.sum GMultiset.diff at h_eval
+
+      -- 5. Agora o problema foi reduzido a uma igualdade pura de números naturais
+      -- A sua álgebra (ENat.toNat) precisa ser alinhada com os operadores normais de Nat.
+      sorry
+
+  -- 5. A Mathlib requer que para todo y ∈ Y_mathlib, exista um x ∈ X_mathlib tal que R x y.
+  -- Nós temos exatamente essa lógica em 'h_red'.
+  have h_reduction_equiv : ∀ y ∈ Y_mathlib, ∃ x ∈ X_mathlib, R x y := by
+    -- Implementação futura: Requer provar que a pertinência (y ∈ Y_mathlib)
+    -- é logicamente equivalente a (Y.val y > 0)
+    sorry
+
+  -- 6. Finalmente, aplicamos o construtor de CutExpand da Mathlib com as peças validadas
+  -- (O construtor exato aplicaria h_algebraic_equiv e h_reduction_equiv)
+  sorry
 
 open scoped Classical in
 /-- Lema auxiliar: >_lex é bem-fundada. -/
