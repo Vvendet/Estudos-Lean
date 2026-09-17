@@ -72,8 +72,17 @@ def GMultiset.finite_singleton {α : Type} [DecidableEq α] (a : α) : GMultiset
 def GMultiset.set_singleton {α : Type} [DecidableEq α] (a : α) : GMultiset α :=
   fun x => if x = a then ⊤ else 0
 
+-- 1. Redefinição Mathlib-nativa da Extensão de Multiconjuntos
+def MultisetExtension {α : Type} (R : α → α → Prop) : Multiset α → Multiset α → Prop :=
+  Relation.TransGen (Relation.CutExpand R)
+
+-- 2. A Mathlib entrega a boa-fundação do CutExpand e do TransGen prontas
+lemma MultisetExtension_wf {α : Type} {R : α → α → Prop} (hwf : WellFounded R) :
+    WellFounded (MultisetExtension R) :=
+  WellFounded.transGen (WellFounded.cutExpand hwf)
+
 /-- A extensão finita de multiconjunto de uma relação de ordem R -/
-def MultisetExtension {α : Type} (R : α → α → Prop) (M1 M2 : GMultiset α) : Prop :=
+def MultisetExtension' {α : Type} (R : α → α → Prop) (M1 M2 : GMultiset α) : Prop :=
   ∃ X Y : GMultiset α,
     IsFiniteMultiset X ∧
     IsFiniteMultiset Y ∧
@@ -81,9 +90,10 @@ def MultisetExtension {α : Type} (R : α → α → Prop) (M1 M2 : GMultiset α
     X ⊆ M1 ∧
     M2 = GMultiset.sum (GMultiset.diff M1 X) Y ∧
     ∀ y, y ∈ Y → ∃ x, x ∈ X ∧ R x y
+
 lemma Acc_r_of_Acc_Multiset {α : Type} [DecidableEq α] {r : α → α → Prop} (a : α)
-    (h : Acc (MultisetExtension r) (GMultiset.finite_singleton a)) : Acc r a := by
-  have H : ∀ (M : GMultiset α), Acc (MultisetExtension r) M →
+    (h : Acc (MultisetExtension' r) (GMultiset.finite_singleton a)) : Acc r a := by
+  have H : ∀ (M : GMultiset α), Acc (MultisetExtension' r) M →
       ∀ (a : α), M = GMultiset.finite_singleton a → Acc r a := by
     intro M hM
     induction hM with
@@ -94,9 +104,9 @@ lemma Acc_r_of_Acc_Multiset {α : Type} [DecidableEq α] {r : α → α → Prop
       intro x hr
       -- Construímos o diagrama do passo na sua extensão multiconjunto
       have h_ext :
-      MultisetExtension r (GMultiset.finite_singleton x) (GMultiset.finite_singleton a1)
+      MultisetExtension' r (GMultiset.finite_singleton x) (GMultiset.finite_singleton a1)
       := by
-        unfold MultisetExtension
+        unfold MultisetExtension'
         refine ⟨GMultiset.finite_singleton x, GMultiset.finite_singleton a1, ?_, ?_, ?_, ?_, ?_, ?_⟩
         · -- Prova de IsFiniteMultiset X
           constructor
@@ -154,7 +164,7 @@ open scoped Classical in
 
     Aqui formalizamos a direção (<=) da equivalência. -/
 theorem MultiSet_WF_iff_ARS_WF {α : Type} (r : α → α → Prop) :
-    WellFounded (MultisetExtension r) → WellFounded r := by
+    WellFounded (MultisetExtension' r) → WellFounded r := by
   intro h_wf_ext
   constructor
   intro a
@@ -162,7 +172,7 @@ theorem MultiSet_WF_iff_ARS_WF {α : Type} (r : α → α → Prop) :
   exact Acc_r_of_Acc_Multiset a (h_wf_ext.apply (GMultiset.finite_singleton a))
 
 def FiniteMultisetExtension {α : Type} (R : α → α → Prop) (M1 M2 : FiniteMultiset α) : Prop :=
-  MultisetExtension R M1.val M2.val
+  MultisetExtension' R M1.val M2.val
 
 theorem Theorem_2_3_12_LeftToRight {α : Type} (r : α → α → Prop) :
     WellFounded r → WellFounded (Relation.TransGen (Relation.CutExpand r)) := by
