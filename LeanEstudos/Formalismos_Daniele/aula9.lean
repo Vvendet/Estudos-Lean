@@ -254,19 +254,9 @@ def LocalDecreasingDiagramsHold {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih :
       -- Fechamento módulo ~ nas pontas do diagrama[cite: 2]
       R.sim d e ∧
       -- Restrição de medida: ||β|| ⪰_mul ||τ|| (usando MultisetExtension da aula 4)[cite: 2, 4]
-      (MultisetExtension R.label_order (lexMaxMeasure R.label_order [β_lbl])
+      (MultisetExtension' R.label_order (lexMaxMeasure R.label_order [β_lbl])
       (lexMaxMeasure R.label_order τ) ∨
        lexMaxMeasure R.label_order [β_lbl] = lexMaxMeasure R.label_order τ)
-
-open scoped Classical in
-/-- A ordem lexicográfica >_lex descrita na prova do Teorema 2.5.10.
-    Compara (||τ||, |σ|) com (||τ'||, |σ'|):
-    Primeiro usa a extensão de multiconjunto sobre os rótulos horizontais.
-    Se forem iguais, usa a ordem natural (<) sobre o comprimento das cadeias verticais. -/
-def lex_order {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order] :
-    (GMultiset I × Nat) → (GMultiset I × Nat) → Prop :=
-  Lexicographic_Order (MultisetExtension R.label_order) (fun a b => a < b)
-
 
 open scoped Classical in
 noncomputable def FiniteMultiset_to_Mathlib {α : Type}
@@ -411,21 +401,24 @@ lemma SingleStepMultisetExtension_to_CutExpand {α : Type} [DecidableEq α] (R :
             change n2 + nX = n1 + nY
             omega
 
-
-
 open scoped Classical in
+/-- A ordem lexicográfica >_lex descrita na prova do Teorema 2.5.10.
+    Compara (||τ||, |σ|) com (||τ'||, |σ'|):
+    Primeiro usa a extensão de multiconjunto sobre os rótulos horizontais.
+    Se forem iguais, usa a ordem natural (<) sobre o comprimento das cadeias verticais. -/
+def lex_order {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order] :
+    (Multiset I × Nat) → (Multiset I × Nat) → Prop :=
+  Lexicographic_Order (MultisetExtension R.label_order) (fun a b => a < b)
+
 /-- Lema auxiliar: >_lex é bem-fundada. -/
-lemma lex_order_wf {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order] :
+lemma lex_order_wf {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order]
+    (h_label_wf : WellFounded R.label_order) :
     WellFounded (lex_order R) := by
-  -- A aula4 formalizou a direção (<=) do Teorema 2.3.12[cite: 1].
-  -- Assumimos a direção (=>) aqui temporariamente para avançarmos com a teoria.
-  have hwf_mul : WellFounded (MultisetExtension R.label_order) := sorry
+  have hwf_multiset := MultisetExtension_wf h_label_wf
+  have hwf_nat := Nat.lt_wfRel.wf
+  exact Lexicographic_Order_WellFounded hwf_multiset hwf_nat
 
-  -- A ordem natural (<) nos naturais não possui cadeias decrescentes infinitas.
-  have hwf_nat : WellFounded (fun (a b : Nat) => a < b) := Nat.lt_wfRel.wf
 
-  -- O produto lexicográfico preserva a boa-fundação (aula3_anexo)[cite: 3].
-  exact Lexicographic_Order_WellFounded hwf_mul hwf_nat
 
 
 /-- Diagrama (i) da Figura 2.11:
