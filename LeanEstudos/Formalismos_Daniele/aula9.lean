@@ -491,30 +491,34 @@ def Diagram_2_11_iii {α : Type} (R : ARS_Mod α) (rb : α → α → Prop) : Pr
   ∀ a b c, sim R a b → rb a c →
     ∃ d, Relation.ReflTransGen rb b d ∧ sim R d c
 
-/-- Lema auxiliar: Estende o Diagrama (i) para uma cadeia reflexiva-transitiva de ra -/
+/-- Estende o Diagrama (i) para uma cadeia reflexiva-transitiva de ra. -/
 lemma lifting_diagram_i {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop)
-    (h_diag_i : Diagram_2_11_i R ra rb) :
+    (h_equiv : Equivalence (sim R))
+    (h_close_diagram : ∀ x y d1 e1 c, ra x y → Relation.ReflTransGen rb x d1 →
+      sim R d1 e1 → Relation.ReflTransGen ra c e1 →
+      ∃ d2 e2, Relation.ReflTransGen rb y d2 ∧ sim R d2 e2 ∧ Relation.ReflTransGen ra c e2) :
     ∀ a b c, Relation.ReflTransGen ra a b → rb a c →
       ∃ d e, Relation.ReflTransGen rb b d ∧ sim R d e ∧ Relation.ReflTransGen ra c e := by
   intro a b c h_rab
-  -- Indução sobre a cadeia ReflTransGen de ra
+  -- Indução sobre a cadeia de passos verticais
   induction h_rab generalizing c with
   | refl =>
-    -- Caso base: zero passos de ra (a = b)
-    -- Reduz-se ao caso em que b = a, o que trivialmente fecha com o Diagrama (iii) ou reflexividade
     intro h_rb_ac
     use c, c
     constructor
-    · exact Relation.ReflTransGen.refl
+    · exact Relation.ReflTransGen.single h_rb_ac
     · constructor
-      · exact Relation.ReflTransGen.refl -- assumindo reflexividade de sim ou usando equivalência
-      · exact Relation.ReflTransGen.refl
-  | tail a x y h_rax h_rxy ih =>
-    -- Passo indutivo: a cadeia vai de a até x, e dá mais um passo até y (x →_ra y)
+      · -- Invocamos a reflexividade garantida pela equivalência
+        exact h_equiv.refl c
+      · exact Relation.ReflTransGen.refls
+  | tail h_rax h_rxy ih =>
     intro h_rb_ac
-    -- Aplicamos a hipótese indutiva para o trecho até x
-    -- ... e usamos o Diagrama (i) para o passo extra de ra (x →_ra y)
-    sorry
+    -- Aplicamos a hipótese indutiva para o trecho até o penúltimo vértice
+    rcases ih c h_rb_ac with ⟨d1, e1, h_rb_x_d1, h_sim_d1_e1, h_ra_c_e1⟩
+    -- Alimentamos a hipótese de fechamento. Os '_' deixam o Lean inferir
+    -- os vértices exatos (b✝, c✝, etc.) a partir das provas!
+    exact h_close_diagram _ _ _ _ _ h_rxy h_rb_x_d1 h_sim_d1_e1 h_ra_c_e1
+
 
 /--
   Teorema 2.5.10 (Parte 1):
