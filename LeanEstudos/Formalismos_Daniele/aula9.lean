@@ -510,7 +510,7 @@ lemma lifting_diagram_i {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop
     · constructor
       · -- Invocamos a reflexividade garantida pela equivalência
         exact h_equiv.refl c
-      · exact Relation.ReflTransGen.refls
+      · exact Relation.ReflTransGen.refl
   | tail h_rax h_rxy ih =>
     intro h_rb_ac
     -- Aplicamos a hipótese indutiva para o trecho até o penúltimo vértice
