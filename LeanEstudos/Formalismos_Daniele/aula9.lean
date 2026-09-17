@@ -102,8 +102,7 @@ lemma IsNormal_ReducesStar_eq {α : Type} (R : ARS_Mod α) (x y : α)
   have cases_head := Relation.ReflTransGen.cases_head hxy_rtg
   rcases cases_head with (rfl | ⟨z, hxz, hzy⟩)
   · rfl
-    exfalso
-    exact hnorm z hxz
+  · exact (hnorm z hxz).elim
 
 -- ---------------------------------------------------------
 -- Lema 2.5.7
@@ -167,10 +166,10 @@ def SubcommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) 
   ∀ a b c, ra a b → rb a c →
     ∃ d e, rb b d ∧ sim R d e ∧ Relation.ReflTransGen ra c e
 
-  /-- Comutação Módulo ~ -/
-  def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
-    SubcommutesModulo R (ReducesModuloRel R ra) (ReducesModuloRel R rb) ∧
-    SubcommutesModulo R (ReducesModuloRel R rb) (ReducesModuloRel R ra)
+/-- Comutação Módulo ~ -/
+def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : Prop :=
+  SubcommutesModulo R (ReducesModuloRel R ra) (ReducesModuloRel R rb) ∧
+  SubcommutesModulo R (ReducesModuloRel R rb) (ReducesModuloRel R ra)
 
 -- ---------------------------------------------------------
 -- Transição para Sistemas de Redução Rotulados (Labeled ARS)
@@ -412,45 +411,7 @@ lemma SingleStepMultisetExtension_to_CutExpand {α : Type} [DecidableEq α] (R :
             change n2 + nX = n1 + nY
             omega
 
--- Lema Auxiliar 1: Se um multiconjunto não é vazio, sua cardinalidade na Mathlib é > 0
-lemma Multiset_card_pos_of_not_empty {α : Type} [DecidableEq α] (X : FiniteMultiset α)
-    (h_nempty : X.val ≠ ∅) : Multiset.card (FiniteMultiset_to_Mathlib X) > 0 := by
-  sorry
 
--- Lema Auxiliar 2: Se a cardinalidade de X é 1, a extensão geral colapsa para a extensão de passo único
-lemma SingleStep_of_Card_One {α : Type} [DecidableEq α] (R : α → α → Prop)
-    (M1 M2 X Y : FiniteMultiset α)
-    (h_card : Multiset.card (FiniteMultiset_to_Mathlib X) = 1)
-    (h_ext : FiniteMultisetExtension R M1 M2) :
-    SingleStepMultisetExtension R M1 M2 := by
-  sorry
-
-
-lemma FiniteMultisetExtension_implies_TransGen {α : Type} [DecidableEq α] (R : α → α → Prop)
-    (M1 M2 : FiniteMultiset α)
-    (h_ext : FiniteMultisetExtension R M1 M2) :
-    Relation.TransGen (Relation.CutExpand R) (FiniteMultiset_to_Mathlib M2) (FiniteMultiset_to_Mathlib M1) := by
-
-  -- 1. Desdobramos a extensão original para extrair o multiconjunto X removido
-  unfold FiniteMultisetExtension at h_ext
-  unfold MultisetExtension at h_ext
-  rcases h_ext with ⟨X_val, Y_val, hX_fin, hY_fin, hX_nempty, hX_sub_M1, hM2_eq, h_red⟩
-
-  -- 2. A estratégia matemática exigirá indução sobre o tamanho (cardinalidade) de X_val.
-  --    Como hX_nempty garante que X_val ≠ ∅, sabemos que o tamanho de X_val é ≥ 1.
-
-  -- BASE DA INDUÇÃO (|X| = 1):
-  -- Se X_val for um singleton ({a}), a sua extensão de múltiplos passos colapsa
-  -- exatamente na 'SingleStepMultisetExtension'.
-  -- Invocamos o lema que acabamos de provar e aplicamos 'Relation.TransGen.single'.
-
-  -- PASSO INDUTIVO (|X| = n + 1):
-  -- Se X_val = {a} + X_resto, nós particionamos a operação em dois passos:
-  -- Passo A: Removemos 'a' e inserimos os elementos de Y_val relacionados a ele.
-  -- Passo B: Invocamos a hipótese indutiva para o X_resto.
-  -- Juntamos os passos usando 'Relation.TransGen.head' ou 'Relation.TransGen.tail'.
-
-  sorry
 
 open scoped Classical in
 /-- Lema auxiliar: >_lex é bem-fundada. -/
@@ -522,15 +483,19 @@ lemma lifting_diagram_i {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop
 
 /--
   Teorema 2.5.10 (Parte 1):
-  Se as relações locais ra e rb satisfazem os três diagramas localmente
-  decrescentes da Figura 2.11, então ra e rb comutam módulo a equivalência de R.
+  Se as relações locais ra e rb satisfazem os diagramas locais e a propriedade de
+  fechamento decrescente, então ra e rb comutam módulo a equivalência de R.
 -/
 theorem Theorem_2_5_10_Part1 {α : Type}
     (R : ARS_Mod α)
     (ra rb : α → α → Prop)
+    (h_equiv : Equivalence (sim R))
     (h_diag_i : Diagram_2_11_i R ra rb)
     (h_diag_ii : Diagram_2_11_ii R ra)
-    (h_diag_iii : Diagram_2_11_iii R rb) :
+    (h_diag_iii : Diagram_2_11_iii R rb)
+    (h_close_diagram : ∀ x y d1 e1 c, ra x y → Relation.ReflTransGen rb x d1 →
+      sim R d1 e1 → Relation.ReflTransGen ra c e1 →
+      ∃ d2 e2, Relation.ReflTransGen rb y d2 ∧ sim R d2 e2 ∧ Relation.ReflTransGen ra c e2) :
     CommutesModulo R ra rb := by
 
   unfold CommutesModulo
@@ -540,39 +505,31 @@ theorem Theorem_2_5_10_Part1 {α : Type}
     unfold SubcommutesModulo
     intro a b c h_ra_ab h_rb_ac
 
-    -- Revelamos a anatomia do passo isolado envelopado por equivalências
     unfold ReducesModuloRel at h_ra_ab h_rb_ac
-
-    -- Extraímos os pontos intermediários do passo vertical (ra): a ~ a1 →_v b1 ~ b
     rcases h_ra_ab with ⟨a1, b1, h_sim_a_a1, h_ra_a1_b1, h_sim_b1_b⟩
-
-    -- Extraímos os pontos intermediários do passo horizontal (rb): a ~ a2 →_h c1 ~ c
     rcases h_rb_ac with ⟨a2, c1, h_sim_a_a2, h_rb_a2_c1, h_sim_c1_c⟩
 
-    -- Agora temos a topologia completa exposta para conectarmos os diagramas!
-    -- 1. Conectamos o platô superior: a1 ~ a e a ~ a2 implica a1 ~ a2
-    have h_sim_a1_a : sim R a1 a := by
-      -- Como ~ é gerada por H (que é simétrica), a relação inteira é simétrica
-      sorry
+    -- Usamos a simetria e transitividade da equivalência para conectar a1 e a2
+    have h_sim_a1_a : sim R a1 a := h_equiv.symm a a1 h_sim_a_a1
+    have h_sim_a1_a2 : sim R a1 a2 := h_equiv.trans a1 a a2 h_sim_a1_a h_sim_a_a2
 
-    have h_sim_a1_a2 : sim R a1 a2 := by
-      -- A transitividade do fecho reflexivo-transitivo (ReflTransGen.trans)
-      sorry
-
-    -- 2. Primeira Colagem: Aplicamos o Diagrama (ii)
-    -- Temos: a1 →_ra b1 e a1 ~ a2
-    -- O Diagrama (ii) nos garante um ponto 'w1' tal que b1 ~ w1 e a2 →_ra* w1
+    -- Aplicamos o Diagrama (ii)
     have h_aplic_diag_ii := h_diag_ii a1 b1 a2 h_ra_a1_b1 h_sim_a1_a2
     rcases h_aplic_diag_ii with ⟨w1, h_sim_b1_w1, h_ra_a2_w1⟩
 
-    -- O nosso estado topológico atualizado a partir de 'a2' agora é:
-    -- a2 →_rb c1 (h_rb_a2_c1)   [1 passo horizontal]
-    -- a2 →_ra* w1 (h_ra_a2_w1)  [N passos verticais]
+    -- Agora invocamos o nosso lema de lifting poderoso!
+    -- Ele empurra a cadeia de ra (a2 →* w1) através do passo horizontal rb (a2 → c1)
+    have h_aplic_lifting := lifting_diagram_i R ra rb h_equiv h_diag_i h_close_diagram a2 w1 c1 h_ra_a2_w1 h_rb_a2_c1
 
+    -- Extraímos o fechamento
+    rcases h_aplic_lifting with ⟨d, e, h_rb_w1_d, h_sim_d_e, h_ra_c1_e⟩
+
+    -- (O restante da colagem usará o Diagrama iii para alinhar c1 com c, e b1 com b)
     sorry
 
   · -- Submeta 2: rb subcomuta com ra módulo ~
-    -- Meta: ∀ a b c, RedModulo(rb) a b → RedModulo(ra) a c → Convergem
+    unfold SubcommutesModulo
+    intro a b c h_rb_ab h_ra_bc
     sorry
 
 /-- Teorema 2.5.10 (Parte 2): Se as reduções verticais, horizontais e globais
