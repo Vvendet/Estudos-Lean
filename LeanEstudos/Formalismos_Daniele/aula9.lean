@@ -480,7 +480,6 @@ lemma lifting_diagram_ii {α : Type} (R : ARS_Mod α) (ra : α → α → Prop)
     (h_diag_ii : Diagram_2_11_ii R ra) :
     ∀ a b c, Relation.ReflTransGen ra a b → sim R a c →
       ∃ d, sim R b d ∧ Relation.ReflTransGen ra c d := by
-
   intro a b c h_rab
   -- Indução simples sobre a cadeia reflexiva-transitiva de ra
   induction h_rab generalizing c with
@@ -488,14 +487,11 @@ lemma lifting_diagram_ii {α : Type} (R : ARS_Mod α) (ra : α → α → Prop)
     intro h_sim_ac
     -- Caso base: 0 passos de ra. O elemento é o próprio c.
     use c
-
   | tail h_rax h_rxy ih =>
     intro h_sim_ac
     rcases ih c h_sim_ac with ⟨d1, h_sim_x_d1, h_ra_c_d1⟩
-
     -- Agora aplicamos o diagrama (ii) de 1 passo sobre x →_ra y e x ~ d1.
     rcases h_diag_ii _ _ _ h_rxy h_sim_x_d1 with ⟨d2, h_sim_y_d2, h_ra_d1_d2⟩
-
     -- Juntamos os caminhos.
     use d2
     constructor
