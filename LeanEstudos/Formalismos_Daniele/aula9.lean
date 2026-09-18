@@ -638,6 +638,94 @@ theorem Theorem_2_5_10_Part1 {α : Type}
       · exact h_sim_e'_d'
       · exact lift_to_modulo R rb h_equiv c d' h_rb_c_d'
 
+lemma reduces_seq_nil_inv {α I : Type} (R : LabeledARS_Mod α I) {a b : α}
+    (h : reduces_seq R [] a b) : a = b :=
+  h
+
+lemma reduces_seq_cons_inv {α I : Type} (R : LabeledARS_Mod α I) {i : I} {is : List I} {a b : α}
+    (h : reduces_seq R (i :: is) a b) : ∃ c, R.reduces i a c ∧ reduces_seq R is c b :=
+  h
+
+lemma reduces_seq_trans {α I : Type} (R : LabeledARS_Mod α I) {a b c : α}
+    (l1 l2 : List I) (h1 : reduces_seq R l1 a b) (h2 : reduces_seq R l2 b c) :
+    reduces_seq R (l1 ++ l2) a c := by
+  induction l1 generalizing a with
+  | nil =>
+    -- Caso base: l1 vazio implica a = b. Logo, o caminho é apenas h2.
+    cases reduces_seq_nil_inv R h1
+    exact h2
+  | cons i is ih =>
+    -- Passo indutivo: extrai o primeiro passo de l1 e aplica a hipótese no resto.
+    rcases reduces_seq_cons_inv R h1 with ⟨x, h_step, h_rest⟩
+    exact ⟨x, h_step, ih h_rest⟩
+
+lemma lex_order_desc_left {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order]
+    (m1 m2 : Multiset I) (n1 n2 : Nat)
+    (h_mul : MultisetExtension R.label_order m1 m2) :
+    lex_order R (m1, n1) (m2, n2) := by
+  -- Expande a definição da ordem lexicográfica
+  unfold lex_order
+  -- Usa o lado esquerdo da disjunção (∨)
+  apply Or.inl
+  exact h_mul
+
+lemma lex_order_desc_right {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel R.label_order]
+    (m : Multiset I) (n1 n2 : Nat)
+    (h_nat : n1 < n2) :
+    lex_order R (m, n1) (m, n2) := by
+  unfold lex_order
+  -- Usa o lado direito da disjunção (∨)
+  apply Or.inr
+  -- Como o lado direito costuma ser um "E" (m = m ∧ n1 < n2), usamos constructor
+  constructor
+  · rfl -- Prova que m = m por reflexividade
+  · exact h_nat
+
+lemma closure_of_decreasing_diagrams {α I : Type} (R : LabeledARS_Mod α I)
+    (Iv Ih : Set I) [DecidableRel R.label_order] [DecidableEq I]
+    (h_label_wf : WellFounded R.label_order)
+    (h_local_dec : LocalDecreasingDiagramsHold R Iv Ih) :
+    ∀ (measure : Multiset I × Nat) (x y d1 e1 c : α)
+      (i_a : I) (τ_b σ_a : List I),
+
+      -- VÍNCULO DA MEDIDA (Usamos a lista τ_b diretamente como Multiconjunto)
+      measure = (↑τ_b, σ_a.length) →
+
+      i_a ∈ Iv → (∀ i ∈ τ_b, i ∈ Ih) → (∀ i ∈ σ_a, i ∈ Iv) →
+      R.reduces i_a x y → reduces_seq R τ_b x d1 →
+      sim R.toARS_Mod d1 e1 → reduces_seq R σ_a c e1 →
+
+      ∃ d2 e2 τ_b_new σ_a_new,
+        (∀ i ∈ τ_b_new, i ∈ Ih) ∧ (∀ i ∈ σ_a_new, i ∈ Iv) ∧
+        reduces_seq R τ_b_new y d2 ∧
+        sim R.toARS_Mod d2 e2 ∧
+        reduces_seq R σ_a_new c e2 := by
+
+  intro measure
+  induction measure using WellFounded.induction (lex_order_wf R h_label_wf) with
+  | h m ih =>
+    intro x y d1 e1 c i_a τ_b σ_a h_measure_eq h_ia_Iv h_tb_Ih h_sa_Iv
+      h_ia_xy h_tb_xd1 h_sim_d1e1 h_sa_ce1
+
+    -- Inspecionamos a cadeia horizontal τ_b
+    cases τ_b with
+    | nil =>
+      -- ==========================================
+      -- CASO BASE: τ_b é vazia (x = d1)
+      -- ==========================================
+      have h_x_eq_d1 := reduces_seq_nil_inv R h_tb_xd1
+      subst h_x_eq_d1
+
+      sorry
+
+    | cons j js =>
+      -- ==========================================
+      -- PASSO INDUTIVO: τ_b tem pelo menos 1 passo (j :: js)
+      -- ==========================================
+      have h_cons_inv := reduces_seq_cons_inv R h_tb_xd1
+      rcases h_cons_inv with ⟨x1, h_j_x_x1, h_js_x1_d1⟩
+
+      sorry
 /-- Teorema 2.5.10 (Parte 2): Se as reduções verticais, horizontais e globais
     coincidem (→_A = →_v = →_h), o sistema inteiro é CR~[cite: 1]. -/
 theorem Theorem_2_5_10_Part2 {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih : Set I)
