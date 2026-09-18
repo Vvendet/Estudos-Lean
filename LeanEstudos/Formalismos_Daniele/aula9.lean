@@ -514,17 +514,13 @@ lemma lifting_diagram_iii {α : Type} (R : ARS_Mod α) (rb : α → α → Prop)
     · exact Relation.ReflTransGen.refl
     · -- symm infere os vértices implicitamente
       exact h_equiv.symm h_sim
-
   | tail h_rax h_rxy ih =>
     -- Passo indutivo: a cadeia vai até x, e dá mais um passo até y.
     rcases ih with ⟨d1, h_rb_b_d1, h_sim_d1_x⟩
-
     -- Invertemos a equivalência d1 ~ x para x ~ d1
     have h_sim_x_d1 := h_equiv.symm h_sim_d1_x
-
     -- Aplicamos o diagrama (iii)
     rcases h_diag_iii _ d1 _ h_sim_x_d1 h_rxy with ⟨d2, h_rb_d1_d2, h_sim_d2_y⟩
-
     -- Juntamos os caminhos.
     use d2
     constructor
@@ -544,8 +540,7 @@ lemma lift_to_modulo {α : Type} (R : ARS_Mod α) (r : α → α → Prop) (h_eq
     -- A equivalência nos permite usar reflexividade nas pontas do passo único
     exact ⟨_, _, h_equiv.refl _, h_step, h_equiv.refl _⟩
 
-/--
-  Teorema 2.5.10 (Parte 1):
+/-- Teorema 2.5.10 (Parte 1):
   Se as relações locais ra e rb satisfazem os diagramas locais e a propriedade de
   fechamento decrescente, então ra e rb comutam módulo a equivalência de R.
 -/
@@ -559,52 +554,41 @@ theorem Theorem_2_5_10_Part1 {α : Type}
       sim R d1 e1 → Relation.ReflTransGen ra c e1 →
       ∃ d2 e2, Relation.ReflTransGen rb y d2 ∧ sim R d2 e2 ∧ Relation.ReflTransGen ra c e2) :
     CommutesModulo R ra rb := by
-
   unfold CommutesModulo
   constructor
-
   · -- Submeta 1: ra subcomuta com rb módulo ~
     unfold SubcommutesModulo
     intro a b c h_ra_ab h_rb_ac
-
     unfold ReducesModuloRel at h_ra_ab h_rb_ac
     rcases h_ra_ab with ⟨a1, b1, h_sim_a_a1, h_ra_a1_b1, h_sim_b1_b⟩
     rcases h_rb_ac with ⟨a2, c1, h_sim_a_a2, h_rb_a2_c1, h_sim_c1_c⟩
-
     -- 1. Alinhamento inicial (platô superior)
     have h_sim_a1_a := h_equiv.symm h_sim_a_a1
     have h_sim_a1_a2 := h_equiv.trans h_sim_a1_a h_sim_a_a2
-
     -- 2. Aplicação do Diagrama (ii) original
     have h_aplic_diag_ii := h_diag_ii a1 b1 a2 h_ra_a1_b1 h_sim_a1_a2
     rcases h_aplic_diag_ii with ⟨w1, h_sim_b1_w1, h_ra_a2_w1⟩
-
     -- 3. Cruzamento principal usando o lifting do Diagrama (i)
     have h_aplic_lifting :=
     lifting_diagram_i R ra rb h_equiv h_close_diagram a2 w1 c1 h_ra_a2_w1 h_rb_a2_c1
     rcases h_aplic_lifting with ⟨d, e, h_rb_w1_d, h_sim_d_e, h_ra_c1_e⟩
-
     -- 4. Empurrar a equivalência de b1 até b pelo caminho esquerdo (rb*)
     have h_sim_w1_b1 := h_equiv.symm h_sim_b1_w1
     have h_aplic_lift_iii_w1 :=
     lifting_diagram_iii R rb h_equiv h_diag_iii w1 b1 d h_sim_w1_b1 h_rb_w1_d
     rcases h_aplic_lift_iii_w1 with ⟨d', h_rb_b1_d', h_sim_d'_d⟩
-
     -- Correção 1: Usamos h_sim_b1_b diretamente, dispensando o symm
     have h_aplic_lift_iii_b :=
     lifting_diagram_iii R rb h_equiv h_diag_iii b1 b d' h_sim_b1_b h_rb_b1_d'
     rcases h_aplic_lift_iii_b with ⟨d'', h_rb_b_d'', h_sim_d''_d'⟩
-
     -- 5. Empurrar a equivalência de c1 até c pelo caminho direito (ra*)
     -- Correção 2: Removemos h_equiv da chamada para alinhar com a assinatura do seu lema
     have h_aplic_lift_ii_c := lifting_diagram_ii R ra h_diag_ii c1 e c h_ra_c1_e h_sim_c1_c
     rcases h_aplic_lift_ii_c with ⟨e', h_sim_e_e', h_ra_c_e'⟩
-
     -- 6. Conectar todas as equivalências no centro (d'' ~ e')
     have h_sim_d''_d := h_equiv.trans h_sim_d''_d' h_sim_d'_d
     have h_sim_d''_e := h_equiv.trans h_sim_d''_d h_sim_d_e
     have h_sim_d''_e' := h_equiv.trans h_sim_d''_e h_sim_e_e'
-
     -- 7. Fechar o diamante final com a elevação para módulo ~
     use d'', e'
     constructor
@@ -612,23 +596,18 @@ theorem Theorem_2_5_10_Part1 {α : Type}
     · constructor
       · exact h_sim_d''_e'
       · exact lift_to_modulo R ra h_equiv c e' h_ra_c_e'
-
   · -- Submeta 2: rb subcomuta com ra módulo ~
     unfold SubcommutesModulo
     intro a b c h_rb_ab h_ra_ac
-
     unfold ReducesModuloRel at h_rb_ab h_ra_ac
     rcases h_rb_ab with ⟨a1, b1, h_sim_a_a1, h_rb_a1_b1, h_sim_b1_b⟩
     rcases h_ra_ac with ⟨a2, c1, h_sim_a_a2, h_ra_a2_c1, h_sim_c1_c⟩
-
     -- 1. Alinhamento inicial (platô superior)
     have h_sim_a1_a := h_equiv.symm h_sim_a_a1
     have h_sim_a1_a2 := h_equiv.trans h_sim_a1_a h_sim_a_a2
-
     -- 2. Aplicação do Diagrama (iii) (espelhado para rb)
     have h_aplic_diag_iii := h_diag_iii a1 a2 b1 h_sim_a1_a2 h_rb_a1_b1
     rcases h_aplic_diag_iii with ⟨w1, h_rb_a2_w1, h_sim_w1_b1⟩
-
     -- 3. Cruzamento principal invocando diretamente a hipótese de fechamento
     -- Como rb é uma cadeia e ra é um passo único, invocamos h_close_diagram diretamente.
     -- Alimentamos o platô inferior com reflexividade (w1 ~ w1 e w1 →* w1) para fechar a chamada.
@@ -637,24 +616,20 @@ theorem Theorem_2_5_10_Part1 {α : Type}
     have h_aplic_fechamento :=
     h_close_diagram a2 c1 w1 w1 w1 h_ra_a2_c1 h_rb_a2_w1 h_sim_w1_w1 h_ra_w1_w1
     rcases h_aplic_fechamento with ⟨d, e, h_rb_c1_d, h_sim_d_e, h_ra_w1_e⟩
-
     -- 4. Empurrar a equivalência de c1 até c pelo caminho esquerdo (rb*)
     have h_aplic_lift_iii_c :=
     lifting_diagram_iii R rb h_equiv h_diag_iii c1 c d h_sim_c1_c h_rb_c1_d
     rcases h_aplic_lift_iii_c with ⟨d', h_rb_c_d', h_sim_d'_d⟩
-
     -- 5. Empurrar a equivalência de b1 até b pelo caminho direito (ra*)
     have h_sim_w1_b := h_equiv.trans h_sim_w1_b1 h_sim_b1_b
     have h_aplic_lift_ii_b := lifting_diagram_ii R ra h_diag_ii w1 e b h_ra_w1_e h_sim_w1_b
     rcases h_aplic_lift_ii_b with ⟨e', h_sim_e_e', h_ra_b_e'⟩
-
     -- 6. Conectar todas as equivalências no centro (e' ~ d')
     have h_sim_e'_e := h_equiv.symm h_sim_e_e'
     have h_sim_e_d := h_equiv.symm h_sim_d_e
     have h_sim_d_d' := h_equiv.symm h_sim_d'_d
     have h_sim_e'_d := h_equiv.trans h_sim_e'_e h_sim_e_d
     have h_sim_e'_d' := h_equiv.trans h_sim_e'_d h_sim_d_d'
-
     -- 7. Fechar o diamante final com a elevação para módulo ~
     use e', d'
     constructor
