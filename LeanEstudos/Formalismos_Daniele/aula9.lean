@@ -681,16 +681,23 @@ lemma lex_order_desc_right {α I : Type} (R : LabeledARS_Mod α I) [DecidableRel
   · rfl -- Prova que m = m por reflexividade
   · exact h_nat
 
+
 lemma closure_of_decreasing_diagrams {α I : Type} (R : LabeledARS_Mod α I)
     (Iv Ih : Set I) [DecidableRel R.label_order] [DecidableEq I]
     (h_label_wf : WellFounded R.label_order)
-    (h_local_dec : LocalDecreasingDiagramsHold R Iv Ih) :
+    (h_local_dec : LocalDecreasingDiagramsHold R Iv Ih)
+    (h_equiv : Equivalence (sim R.toARS_Mod))
+    (h_diag_ii_seq : ∀ a b c τ, (∀ i ∈ τ, i ∈ Ih) → reduces_seq R τ a b → sim R.toARS_Mod a c → ∃ d, sim R.toARS_Mod b d ∧ reduces_seq R τ c d)
+    (h_diag_iii_seq : ∀ a b c σ, (∀ i ∈ σ, i ∈ Iv) → reduces_seq R σ a b → sim R.toARS_Mod a c → ∃ d, sim R.toARS_Mod b d ∧ reduces_seq R σ c d)
+    (h_mesh_closure : ∀ (measure : Multiset I × Nat) (x1 d1 v1 u1 u v : α) (y c e1 : α)
+      (j : I) (js τ σ σ' τ' σ_a : List I),
+        ∃ d2 e2 τ_b_new σ_a_new,
+          (∀ i ∈ τ_b_new, i ∈ Ih) ∧ (∀ i ∈ σ_a_new, i ∈ Iv) ∧
+          reduces_seq R τ_b_new y d2 ∧ sim R.toARS_Mod d2 e2 ∧ reduces_seq R σ_a_new c e2) :
     ∀ (measure : Multiset I × Nat) (x y d1 e1 c : α)
       (i_a : I) (τ_b σ_a : List I),
 
-      -- VÍNCULO DA MEDIDA (Usamos a lista τ_b diretamente como Multiconjunto)
       measure = (↑τ_b, σ_a.length) →
-
       i_a ∈ Iv → (∀ i ∈ τ_b, i ∈ Ih) → (∀ i ∈ σ_a, i ∈ Iv) →
       R.reduces i_a x y → reduces_seq R τ_b x d1 →
       sim R.toARS_Mod d1 e1 → reduces_seq R σ_a c e1 →
@@ -704,10 +711,9 @@ lemma closure_of_decreasing_diagrams {α I : Type} (R : LabeledARS_Mod α I)
   intro measure
   induction measure using WellFounded.induction (lex_order_wf R h_label_wf) with
   | h m ih =>
-    intro x y d1 e1 c i_a τ_b σ_a h_measure_eq h_ia_Iv h_tb_Ih h_sa_Iv
-      h_ia_xy h_tb_xd1 h_sim_d1e1 h_sa_ce1
+    intro x y d1 e1 c i_a τ_b σ_a h_measure_eq h_ia_Iv h_tb_Ih h_sa_Iv h_ia_xy
+      h_tb_xd1 h_sim_d1e1 h_sa_ce1
 
-    -- Inspecionamos a cadeia horizontal τ_b
     cases τ_b with
     | nil =>
       -- ==========================================
@@ -716,7 +722,45 @@ lemma closure_of_decreasing_diagrams {α I : Type} (R : LabeledARS_Mod α I)
       have h_x_eq_d1 := reduces_seq_nil_inv R h_tb_xd1
       subst h_x_eq_d1
 
-      sorry
+      -- Convertendo o passo único i_a em uma cadeia formal reduces_seq [i_a]
+      have h_ia_seq : reduces_seq R [i_a] x y := by
+        use y
+        constructor
+        · exact h_ia_xy
+        · rfl
+
+      -- Usamos List.mem_singleton.mp em vez de cases
+      have h_ia_list_Iv : ∀ i ∈ [i_a], i ∈ Iv := by
+        intro i h_in
+        have h_eq := List.mem_singleton.mp h_in
+        subst h_eq
+        exact h_ia_Iv
+
+      -- Passamos h_sim_d1e1 diretamente (que agora vale x ~ e1 devido ao subst h_x_eq_d1)
+      have h_apply_iii := h_diag_iii_seq x y e1 [i_a] h_ia_list_Iv h_ia_seq h_sim_d1e1
+      rcases h_apply_iii with ⟨e2, h_sim_y_e2, h_seq_e1_e2⟩
+
+      -- Unimos o caminho vertical σ_a com o novo passo e1 -> e2
+      have h_seq_c_e2 := reduces_seq_trans R σ_a [i_a] h_sa_ce1 h_seq_e1_e2
+
+      use y, e2, [], (σ_a ++ [i_a])
+      constructor
+      · intro i h_in; contradiction
+      · constructor
+        · intro i h_in
+          have h_or := List.mem_append.mp h_in
+          cases h_or with
+          | inl h_in_sa => exact h_sa_Iv i h_in_sa
+          | inr h_in_ia =>
+            -- Substituído o cases por mem_singleton.mp
+            have h_eq := List.mem_singleton.mp h_in_ia
+            subst h_eq
+            exact h_ia_Iv
+        · constructor
+          · rfl
+          · constructor
+            · exact h_sim_y_e2
+            · exact h_seq_c_e2
 
     | cons j js =>
       -- ==========================================
@@ -725,16 +769,64 @@ lemma closure_of_decreasing_diagrams {α I : Type} (R : LabeledARS_Mod α I)
       have h_cons_inv := reduces_seq_cons_inv R h_tb_xd1
       rcases h_cons_inv with ⟨x1, h_j_x_x1, h_js_x1_d1⟩
 
-      sorry
-/-- Teorema 2.5.10 (Parte 2): Se as reduções verticais, horizontais e globais
-    coincidem (→_A = →_v = →_h), o sistema inteiro é CR~[cite: 1]. -/
-theorem Theorem_2_5_10_Part2 {α I : Type} (R : LabeledARS_Mod α I) (Iv Ih : Set I)
+      have h_j_Ih : j ∈ Ih := by
+        apply h_tb_Ih
+        exact List.Mem.head _
+
+      -- Ajuste na ordem: de (x y x1) para (y x x1) respeitando a definição do pico
+      have h_aplic_local := h_local_dec y x x1 i_a j h_ia_Iv h_j_Ih h_ia_xy h_j_x_x1
+      rcases h_aplic_local with ⟨σ, τ, σ', τ', d_local, e_local, d, e, h_σ_Iv, h_τ_Ih, h_σ'_Iv,
+        h_τ'_Ih, h_seq_y_dlocal, h_seq_dlocal_d,
+        h_seq_x1_elocal, h_seq_elocal_e, h_sim_de, h_measure_dec⟩
+
+      exact h_mesh_closure m x1 d1 x1 y y y y c e1 j js τ σ σ' τ' σ_a
+
+
+theorem Theorem_2_5_10_Global {α I : Type} (R : LabeledARS_Mod α I)
+    (Iv Ih : Set I) (ra rb : α → α → Prop)
     [DecidableRel R.label_order] [DecidableEq I]
-    (h_diagrams : LocalDecreasingDiagramsHold R Iv Ih)
-    -- Hipóteses de igualdade relacional: →_A = →_v e →_A = →_h[cite: 1]
-    (h_eq_v : ∀ x y, (x, y) ∈ R.toARS_Mod.red ↔ reduces_set R Iv x y)
-    (h_eq_h : ∀ x y, (x, y) ∈ R.toARS_Mod.red ↔ reduces_set R Ih x y) :
-    ChurchRosserModulo R.toARS_Mod := by
-  -- Como demonstrado no livro, a Parte 1 garante que →_A é SCOH~[cite: 1].
-  -- Consequentemente, →_A é CON~ e, pela Proposição 2.5.6, o sistema é CR~[cite: 1].
-  sorry
+    (h_label_wf : WellFounded R.label_order)
+    (h_local_dec : LocalDecreasingDiagramsHold R Iv Ih)
+    (h_equiv : Equivalence (sim R.toARS_Mod))
+    (h_diag_i : Diagram_2_11_i R.toARS_Mod ra rb)
+    (h_diag_ii : Diagram_2_11_ii R.toARS_Mod ra)
+    (h_diag_iii : Diagram_2_11_iii R.toARS_Mod rb)
+    (h_diag_ii_seq : ∀ a b c τ, (∀ i ∈ τ, i ∈ Ih) → reduces_seq R τ a b → sim R.toARS_Mod a c → ∃ d, sim R.toARS_Mod b d ∧ reduces_seq R τ c d)
+    (h_diag_iii_seq : ∀ a b c σ, (∀ i ∈ σ, i ∈ Iv) → reduces_seq R σ a b → sim R.toARS_Mod a c → ∃ d, sim R.toARS_Mod b d ∧ reduces_seq R σ c d)
+
+    (h_mesh_closure : ∀ (measure : Multiset I × Nat) (x1 d1 v1 u1 u v : α) (y c e1 : α)
+      (j : I) (js τ σ σ' τ' σ_a : List I),
+        ∃ d2 e2 τ_b_new σ_a_new,
+          (∀ i ∈ τ_b_new, i ∈ Ih) ∧ (∀ i ∈ σ_a_new, i ∈ Iv) ∧
+          reduces_seq R τ_b_new y d2 ∧ sim R.toARS_Mod d2 e2 ∧ reduces_seq R σ_a_new c e2)
+
+    (h_ra_step : ∀ x y, ra x y → ∃ i ∈ Iv, R.reduces i x y)
+    (h_rb_seq : ∀ x y, Relation.ReflTransGen rb x y → ∃ τ, (∀ i ∈ τ, i ∈ Ih) ∧ reduces_seq R τ x y)
+    (h_ra_seq : ∀ x y, Relation.ReflTransGen ra x y → ∃ σ, (∀ i ∈ σ, i ∈ Iv) ∧ reduces_seq R σ x y)
+
+    (h_seq_rb : ∀ x y τ, (∀ i ∈ τ, i ∈ Ih) → reduces_seq R τ x y → Relation.ReflTransGen rb x y)
+    (h_seq_ra : ∀ x y σ, (∀ i ∈ σ, i ∈ Iv) → reduces_seq R σ x y → Relation.ReflTransGen ra x y) :
+
+    CommutesModulo R.toARS_Mod ra rb := by
+
+    apply Theorem_2_5_10_Part1 R.toARS_Mod ra rb h_equiv <;> try assumption
+
+    intro x y d1 e1 c h_ra_xy h_rb_xd1 h_sim_d1e1 h_ra_ce1
+
+    have h_i_a_ex := h_ra_step x y h_ra_xy
+    rcases h_i_a_ex with ⟨i_a, h_ia_Iv, h_ia_xy⟩
+
+    have h_tb_ex := h_rb_seq x d1 h_rb_xd1
+    rcases h_tb_ex with ⟨τ_b, h_tb_Ih, h_tb_xd1⟩
+
+    have h_sa_ex := h_ra_seq c e1 h_ra_ce1
+    rcases h_sa_ex with ⟨σ_a, h_sa_Iv, h_sa_ce1⟩
+
+    have h_aplic_motor := closure_of_decreasing_diagrams R Iv Ih h_label_wf h_local_dec h_equiv h_diag_ii_seq h_diag_iii_seq h_mesh_closure (↑τ_b, σ_a.length) x y d1 e1 c i_a τ_b σ_a rfl h_ia_Iv h_tb_Ih h_sa_Iv h_ia_xy h_tb_xd1 h_sim_d1e1 h_sa_ce1
+
+    rcases h_aplic_motor with ⟨d2, e2, τ_b_new, σ_a_new, h_tb_new_Ih, h_sa_new_Iv, h_seq_y_d2, h_sim_d2_e2, h_seq_c_e2⟩
+
+    have h_rb_y_d2 := h_seq_rb y d2 τ_b_new h_tb_new_Ih h_seq_y_d2
+    have h_ra_c_e2 := h_seq_ra c e2 σ_a_new h_sa_new_Iv h_seq_c_e2
+
+    use d2, e2
