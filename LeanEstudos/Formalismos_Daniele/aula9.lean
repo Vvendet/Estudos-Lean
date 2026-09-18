@@ -3,7 +3,7 @@ import Mathlib.Data.Multiset.Basic
 import Mathlib.Order.WellFounded
 
 -- ---------------------------------------------------------
--- Proposição 2.5.6 (Ciclo Completo)
+-- Proposição 2.5.6
 -- ---------------------------------------------------------
 
 /-- Coerência Módulo ~ (COH~): ~ · →* ⊆ ↓~ -/
@@ -91,6 +91,7 @@ lemma CON_and_SCOH_to_CR {α : Type} (R : ARS_Mod α)
       · constructor
         · exact sim_symm R hef
         · exact hb1e
+
 -- ---------------------------------------------------------
 -- Lemas Auxiliares para o Lema 2.5.7
 -- ---------------------------------------------------------
@@ -103,12 +104,6 @@ lemma IsNormal_ReducesStar_eq {α : Type} (R : ARS_Mod α) (x y : α)
   rcases cases_head with (rfl | ⟨z, hxz, hzy⟩)
   · rfl
   · exact (hnorm z hxz).elim
-
--- ---------------------------------------------------------
--- Lema 2.5.7
--- ---------------------------------------------------------
-
-
 
 lemma WeaklyNormalizing_and_CoherentModulo_to_StronglyCoherentModulo {α : Type} (R : ARS_Mod α)
     (hWN : WeaklyNormalizing R.toARS)
@@ -138,6 +133,11 @@ lemma WeaklyNormalizing_ConfluenceModulo_CoherentModulo_to_ChurchRosserModulo
   WeaklyNormalizing_and_CoherentModulo_to_StronglyCoherentModulo R hWN hCOH
   -- Conforme o livro: Assim, ele é CR~ pela Proposição 2.5.6
   exact CON_and_SCOH_to_CR R hCON hSCOH
+
+-- ---------------------------------------------------------
+-- Lema 2.5.7
+-- ---------------------------------------------------------
+
 
 /-- Lema 2.5.7 (Parte 3): WN + ACR~ ⇒ CR~ -/
 lemma Lemma_2_5_7_Part3 {α : Type} (R : ARS_Mod α)
@@ -175,9 +175,6 @@ def CommutesModulo {α : Type} (R : ARS_Mod α) (ra rb : α → α → Prop) : P
 -- Transição para Sistemas de Redução Rotulados (Labeled ARS)
 -- ---------------------------------------------------------
 
-/-- Sistema Abstrato de Redução Rotulado operando módulo uma equivalência H.
-    A ordem sobre os rótulos (I) deve ser bem-fundada para podermos
-    usar a medida lexicográfica. -/
 structure LabeledARS_Mod (α : Type) (I : Type) where
   reduces : I → α → α → Prop
   H : α → α → Prop
@@ -198,16 +195,9 @@ def LabeledARS_Mod.sim {α I : Type} (R : LabeledARS_Mod α I) : α → α → P
 
 variable {I : Type} (order : I → I → Prop) [DecidableRel order] [DecidableEq I]
 
-/-- 1. O Down Set (Υ_a) de um rótulo 'a'[cite: 2].
-    Conforme a sua aula4, representamos conjuntos puros como multiconjuntos
-    que retornam infinito (⊤) se o elemento pertencer, e 0 caso contrário[cite: 1, 2]. -/
 def downSet (a : I) : GMultiset I :=
   fun x => if order x a then ⊤ else 0
 
-/-- 2. A Medida Máxima Lexicográfica (|| · ||) para strings (List I)[cite: 2].
-    Processamos a lista da esquerda para a direita (foldl).
-    Caso base: || ε || = ∅
-    Passo: || α a || = [a] ⊕ (|| α || \ Υ_a)[cite: 2]. -/
 def lexMaxMeasure (labels : List I) : GMultiset I :=
   labels.foldl (fun acc a =>
     -- [a] ⊕ (acc \ Υ_a)
